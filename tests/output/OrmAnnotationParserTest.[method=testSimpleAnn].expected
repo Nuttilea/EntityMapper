@@ -1,0 +1,5 @@
+[
+	'id' => ['column' => 'ID', 'type' => 'int'],
+	'tag' => ['column' => true, 'type' => 'int'],
+	'name' => ['belongsTo' => 'user_name', 'type' => 'string'],
+]
