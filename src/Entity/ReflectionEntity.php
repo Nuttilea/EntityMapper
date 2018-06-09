@@ -9,6 +9,7 @@
 namespace Nuttilea\EntityMapper;
 
 use Nette\Reflection\AnnotationsParser;
+use Nuttilea\EntityMapper\Exception\IncorrectAnotationException;
 
 class ReflectionEntity extends \ReflectionClass {
 
@@ -25,8 +26,9 @@ class ReflectionEntity extends \ReflectionClass {
         $properties = OrmAnotationPareser::parseOrmPropertiesTags($annotations['property']);
 
         foreach ($properties as $var => $property) {
+
             if (key_exists('column', $property)) {
-                if (count($property['column']) > 1) throw new IncorrectAnotationException("Annotation @column on property $property->name is there more than one time.");
+                if ((is_array($property['column']) || $property['column'] instanceof \Countable) && count($property['column']) > 1) throw new IncorrectAnotationException("Annotation @column on property $property->name is there more than one time.");
                 $column = $property['column'];
 
                 if ($column === true) $column = $var;
