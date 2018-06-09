@@ -6,7 +6,7 @@
  * Time: 7:08 PM
  */
 
-namespace Nutillea\EntityMapper\Exception;
+namespace Nuttilea\EntityMapper\Exception;
 
 
 use Throwable;

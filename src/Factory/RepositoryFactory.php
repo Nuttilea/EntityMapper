@@ -6,11 +6,11 @@
  * Time: 7:25 PM
  */
 
-namespace Nutillea\EntityMapper\Factory;
+namespace Nuttilea\EntityMapper\Factory;
 
-use Nutillea\EntityMapper\Exception\FactoryException;
-use Nutillea\EntityMapper\Mapper;
-use Nutillea\EntityMapper\Repository;
+use Nuttilea\EntityMapper\Exception\FactoryException;
+use Nuttilea\EntityMapper\Mapper;
+use Nuttilea\EntityMapper\Repository;
 
 class RepositoryFactory {
 

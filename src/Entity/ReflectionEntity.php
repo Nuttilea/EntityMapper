@@ -6,7 +6,7 @@
  * Time: 3:27 PM
  */
 
-namespace Nutillea\EntityMapper;
+namespace Nuttilea\EntityMapper;
 
 use Nette\Reflection\AnnotationsParser;
 

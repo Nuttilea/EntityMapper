@@ -6,7 +6,7 @@
  * Time: 1:57 PM
  */
 
-namespace Nutillea\EntityMapper;
+namespace Nuttilea\EntityMapper;
 
 
 use Nette\Utils\Strings;

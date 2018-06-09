@@ -5,11 +5,11 @@
  * Date: 2/6/18
  * Time: 11:38 PM
  */
-namespace Nutillea\EntityMapper;
+namespace Nuttilea\EntityMapper;
 
-use Nutillea\EntityMapper\Exception\Exception;
-use Nutillea\EntityMapper\Factory\EntityFactory;
-use Nutillea\Utils\ArrayUtils;
+use Nuttilea\EntityMapper\Exception\Exception;
+use Nuttilea\EntityMapper\Factory\EntityFactory;
+use Nuttilea\Utils\ArrayUtils;
 
 class Repository
 {
@@ -60,7 +60,27 @@ class Repository
         return array_map(function($item) use ($self) { return $this->entityFactory->create($this->getEntityClass(), $item->toArray()); }, $data);
     }
 
-    public function delete($primary = []){
+    public function createEntity($data){
+        if(!$data) return null;
+        return $this->entityFactory->create($this->getEntityClass(), $data->toArray());
+    }
+
+    //$this->delete(Entity)
+    //$this->delete([id => 1])
+    //$this->delete(1)
+    public function delete($where = null){
+        if($where instanceof Entity){
+            $primaries = $where->getPrimaryValues();
+        } elseif (is_array($where) && array_keys($where) === range(0, count($where) - 1)) {
+            throw new Exception("Expected associative array [column => value]");
+        } else if(!is_array($where)) {
+            $primaries = $this->mapper->getPrimary($this->getEntityClass());
+            if (count($primaries) !== 1) throw new Exception('Entity has multiple primary...');
+            $where = [$primaries[0] => $where];
+        }
+        $this->dibi->delete($this->getTableName())
+            ->where($where)
+            ->execute();
         return true;
     }
 
@@ -82,16 +102,20 @@ class Repository
         }
     }
 
-    public function update($data){
+    public function update($data, $where = null){
         if ($data instanceof Entity) {
+            if(count($where) > 0) throw new Exception('Cannt use argument $where when argument $data is Entity;');
+            $where = $data->getPrimaryValues();
             $data = $data->toArray();
+        } else if (!is_array($where) || count($where) <= 0){
+            throw new Exception('Argument $where must be array with more items.');
         }
+
         try {
-            $this->dibi->update($this->getTableName(), $data);
-//                ->where(...)
-//                ->execute();
-            return  true;
-        } catch (Exception $e) {
+            $this->dibi->update($this->getTableName(), $data)
+                ->where($where)
+                ->execute();
+        } catch (\Dibi\Exception $e) {
             throw new Exception($e->getMessage(), $e->getCode(), $e);
         }
 
@@ -117,8 +141,7 @@ class Repository
         return $this->entityFactory->create($this->getEntityClass(), $row->toArray());
     }
 
-    public function findAll(array $where = [], $orderBy=[], $limit=null, $offset=null){
-
+    public function getSelectionFindAll(array $where = [], $orderBy=[], $limit=null, $offset=null){
         $table = $this->mapper->getTableByRepositoryClass( get_called_class());
         $fluent = $this->dibi->select('*')
             ->from($table);
@@ -126,9 +149,25 @@ class Repository
         if($orderBy) $fluent->orderBy($orderBy);
         if($limit) $fluent->limit($limit);
         if($offset) $fluent->offset($offset);
-            $rows =$fluent->fetchAll();
 
+        return $fluent;
+    }
+
+    public function findAll(array $where = [], $orderBy=[], $limit=null, $offset=null){
+        $fluent = $this->getSelectionFindAll($where, $orderBy, $limit, $offset);
+        $rows =$fluent->fetchAll();
         return $this->createEntities($rows);
+    }
+
+    public function findOne(array $where = [], $orderBy=[]){
+        $table = $this->mapper->getTableByRepositoryClass( get_called_class());
+        $fluent = $this->dibi->select('*')
+            ->from($table);
+        if($where) $fluent->where($where);
+        if($orderBy) $fluent->orderBy($orderBy);
+        $row =$fluent->fetch();
+
+        return $this->createEntity($row);
     }
 
 }

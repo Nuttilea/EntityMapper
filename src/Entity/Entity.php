@@ -5,7 +5,7 @@
  * Date: 2/6/18
  * Time: 11:37 PM
  */
-namespace Nutillea\EntityMapper;
+namespace Nuttilea\EntityMapper;
 
 use Dibi\Fluent;
 use Nette\SmartObject;
@@ -26,7 +26,8 @@ class Entity
     /**
      * Repository constructor.
      */
-    public function __construct(Mapper $mapper, array $data = []){
+    public function __construct(Mapper $mapper = null, array $data = []){
+        if($mapper==null) $mapper=new Mapper();
         $this->mapper = $mapper;
 
         $this->data = $this->getReflection()->getVariables();
@@ -41,7 +42,7 @@ class Entity
     public function __get($name)
     {
         if(array_key_exists($name, $this->data)){
-            return $this->{$name};
+            return $this->data[$name];
         }
     }
 
@@ -55,6 +56,22 @@ class Entity
             $this->reflection = $this->mapper->getReflectionEntity(get_called_class());
         }
         return $this->reflection;
+    }
+
+    public function getPrimaryValues(){
+        $primaries = $this->reflection->getPrimary();
+
+        if($primaries && is_array($primaries)) {
+            $pairs = [];
+            foreach ($primaries as $column){
+                $pairs[$column] = $this->__get($column);
+            }
+            return $pairs;
+        } elseif ($primaries && is_string($primaries)) {
+            return [$primaries => $this->{$primaries}];
+        }
+
+        return null;
     }
 
     public function getTableName(){

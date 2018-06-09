@@ -6,7 +6,7 @@
  * Time: 10:16 PM
  */
 
-namespace Nutillea\EntityMapper;
+namespace Nuttilea\EntityMapper;
 
 
 class Mapper {

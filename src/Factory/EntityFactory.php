@@ -5,11 +5,11 @@
  * Date: 3/26/18
  * Time: 7:25 PM
  */
-namespace Nutillea\EntityMapper\Factory;
+namespace Nuttilea\EntityMapper\Factory;
 
-use Nutillea\EntityMapper\Entity;
-use Nutillea\EntityMapper\Exception\FactoryException;
-use Nutillea\EntityMapper\Mapper;
+use Nuttilea\EntityMapper\Entity;
+use Nuttilea\EntityMapper\Exception\FactoryException;
+use Nuttilea\EntityMapper\Mapper;
 
 class EntityFactory {
 

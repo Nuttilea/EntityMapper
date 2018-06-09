@@ -5,7 +5,7 @@
  * Date: 2/11/18
  * Time: 12:41 PM
  */
-namespace Nutillea\EntityMapper;
+namespace Nuttilea\EntityMapper;
 
 class Connection
 {
@@ -22,7 +22,7 @@ class Connection
     public function __construct(\Dibi\Connection $dibi, $mapper = null)
     {
         $this->dibi = $dibi;
-        $this->defaultMapper = $mapper ? $mapper : new \Nutillea\Mapper();
+        $this->defaultMapper = $mapper ? $mapper : new \Nuttilea\Mapper();
     }
 
 }

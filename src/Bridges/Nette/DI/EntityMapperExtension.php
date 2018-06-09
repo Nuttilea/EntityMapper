@@ -5,15 +5,15 @@
  * Date: 4/2/18
  * Time: 3:56 PM
  */
-namespace Nutillea\EntityMapper\Bridges\Nette\DI;
+namespace Nuttilea\EntityMapper\Bridges\Nette\DI;
 
 use Nette\Caching\Storages\DevNullStorage;
 use Nette\DI\CompilerExtension;
 use Nette\Loaders\RobotLoader;
-use Nutillea\EntityMapper\Factory\EntityFactory;
-use Nutillea\EntityMapper\Factory\RepositoryFactory;
-use Nutillea\EntityMapper\Mapper;
-use Nutillea\EntityMapper\Repository;
+use Nuttilea\EntityMapper\Factory\EntityFactory;
+use Nuttilea\EntityMapper\Factory\RepositoryFactory;
+use Nuttilea\EntityMapper\Mapper;
+use Nuttilea\EntityMapper\Repository;
 
 class EntityMapperExtension extends CompilerExtension {
 

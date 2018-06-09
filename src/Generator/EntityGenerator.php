@@ -6,11 +6,11 @@
  * Time: 8:44 PM
  */
 
-namespace Nutillea\EntityMapper\Generator;
+namespace Nuttilea\EntityMapper\Generator;
 
 use Nette\PhpGenerator\PhpFile;
-use Nutillea\EntityMapper\Entity;
-use Nutillea\EntityMapper\Mapper;
+use Nuttilea\EntityMapper\Entity;
+use Nuttilea\EntityMapper\Mapper;
 
 class EntityGenerator {
 

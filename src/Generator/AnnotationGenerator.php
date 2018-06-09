@@ -6,7 +6,7 @@
  * Time: 9:00 AM
  */
 
-namespace Nutillea\EntityMapper\Generator;
+namespace Nuttilea\EntityMapper\Generator;
 
 
 class AnnotationGenerator {

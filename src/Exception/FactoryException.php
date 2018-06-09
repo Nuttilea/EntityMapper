@@ -6,7 +6,7 @@
  * Time: 9:09 PM
  */
 
-namespace Nutillea\EntityMapper\Exception;
+namespace Nuttilea\EntityMapper\Exception;
 
 
 class FactoryException extends \Exception {

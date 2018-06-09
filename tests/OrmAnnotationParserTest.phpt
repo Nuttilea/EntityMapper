@@ -2,7 +2,7 @@
 
 namespace Test;
 
-use Nutillea\OrmAnotationPareser;
+use Nuttilea\OrmAnotationPareser;
 use Nette;
 use Tester;
 use Tester\Assert;

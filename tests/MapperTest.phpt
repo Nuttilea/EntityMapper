@@ -2,10 +2,10 @@
 
 namespace Test;
 
-use Nutillea\IMapper;
-use Nutillea\Mapper;
-use Nutillea\MapperV2;
-use Nutillea\ReflectionEntity;
+use Nuttilea\IMapper;
+use Nuttilea\Mapper;
+use Nuttilea\MapperV2;
+use Nuttilea\ReflectionEntity;
 use Nette;
 use Test\classes\Tags;
 use Tester;

@@ -5,7 +5,7 @@
  * Date: 2/13/18
  * Time: 1:08 PM
  */
-namespace Nutillea\EntityMapper\Exception;
+namespace Nuttilea\EntityMapper\Exception;
 
 class IncorrectAnotationException extends \Exception
 {
