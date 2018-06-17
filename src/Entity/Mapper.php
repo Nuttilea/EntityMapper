@@ -20,7 +20,7 @@ class Mapper {
      * @param string $entityClass
      * @return ReflectionEntity
      */
-    public function getReflectionEntity($entityClass){
+    public function getReflectionEntity($entityClass) {
         if(!array_key_exists($entityClass, self::$reflectionsEntity)){
             self::$reflectionsEntity[$entityClass] = new ReflectionEntity($entityClass);
         }
@@ -44,6 +44,12 @@ class Mapper {
         return ucfirst($tableName);
     }
 
+    public function getRepositoryByEntityClass(string $entityClass){
+        $simpleEntityName = $this->trimNamespace($entityClass);
+        $entityName = $this->namespace.$simpleEntityName.'Repository';
+        return $entityName;
+    }
+
     public function getEntityByRepositoryClass(string $repositoryClass){
         $simpleRepositoryName = $this->trimNamespace($repositoryClass);
         $entityName = $this->namespace.preg_replace('~Repository~', '', $simpleRepositoryName);
@@ -63,8 +69,13 @@ class Mapper {
      * @param string $entityClass
      * @return array
      */
-    public function getPrimary($entityClass) {
+    public function getPrimaries($entityClass) {
         return $this->getReflectionEntity($entityClass)->getPrimary();
+    }
+
+    public function getPrimary($entityClass){
+        $p = $this->getPrimaries($entityClass);
+        return array_shift($p);
     }
 
     /**

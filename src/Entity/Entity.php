@@ -9,29 +9,40 @@ namespace Nuttilea\EntityMapper;
 
 use Dibi\Fluent;
 use Nette\SmartObject;
+use Nuttilea\EntityMapper\Factory\RepositoryFactory;
 
 class Entity
 {
 
     use SmartObject;
 
-    /** @var Mapper */
-    public $mapper;
+    /** @var Row */
+    private $row;
 
-    private $data = [];
+    /** @var []ReflectionEntity */
+    protected static $reflections;
 
     /** @var ReflectionEntity */
-    public $reflection;
+    private $currentReflection;
+
+    /** @var boolean */
+    private $attached = false;
 
     /**
      * Repository constructor.
      */
-    public function __construct(Mapper $mapper = null, array $data = []){
-        if($mapper==null) $mapper=new Mapper();
-        $this->mapper = $mapper;
-
-        $this->data = $this->getReflection()->getVariables();
-        if(!empty($data)) $this->setData($data);
+    public function __construct($dataset = null){
+        //INIT DATASET
+        if($dataset instanceof Row){
+            $this->row = $dataset;
+        } else {
+            $this->row = Result::createDetachedInstance()->getRow();
+            //SETUP DEFAULT VALUES
+            //            foreach ($this->getCurrentReflection()->getColumns() as $column) {
+            //                $this->__set($column);
+            //            }
+        }
+        if(!empty($dataset)) $this->assign($dataset);
     }
 
     public function __call($name, $arguments)
@@ -41,9 +52,13 @@ class Entity
 
     public function __get($name)
     {
-        if(array_key_exists($name, $this->data)){
-            return $this->data[$name];
+        $hasOne = $this->getCurrentReflection()->getHasOne();
+        if($hasOne && key_exists($name, $hasOne)){
+//            $this->mapper->getRepositoryByEntityClass(get_called_class());
         }
+        dd($this->row->action);
+        return $this->row[$name];
+
     }
 
     public function __set($name, $value)
@@ -51,15 +66,29 @@ class Entity
         $this->data[$name] = $value;
     }
 
-    public function getReflection(){
-        if(!$this->reflection) {
-            $this->reflection = $this->mapper->getReflectionEntity(get_called_class());
+    public static function getReflection() {
+        $class = get_called_class();
+        if (!isset(static::$reflections[$class])) {
+            static::$reflections[$class] = new ReflectionEntity($class);
         }
-        return $this->reflection;
+        return static::$reflections[$class];
+    }
+
+
+    protected function getCurrentReflection()
+    {
+        if ($this->currentReflection === null) {
+            $this->currentReflection = $this->getReflection();
+        }
+        return $this->currentReflection;
+    }
+
+    public function makeAlive(){
+        $this->attached = true;
     }
 
     public function getPrimaryValues(){
-        $primaries = $this->reflection->getPrimary();
+        $primaries = $this->getCurrentReflection()->getPrimary();
 
         if($primaries && is_array($primaries)) {
             $pairs = [];
@@ -70,29 +99,22 @@ class Entity
         } elseif ($primaries && is_string($primaries)) {
             return [$primaries => $this->{$primaries}];
         }
-
         return null;
     }
 
-    public function getTableName(){
-        return $this->reflection->getTableName();
-    }
-
-    public function setData(array $data){
+    public function assign($data, array $whiteList = []){
+        $reflection = $this->getCurrentReflection();
         foreach ($data as $column => $value){
-            $var = $this->getReflection()->getColumnVariable($column);
-            if(!$var) throw new \Exception("TODO ...." . $var);
-            $this->{$var} = $value;
+            if(!$whiteList || in_array($column, $whiteList)){
+                $var = $reflection->getColumnVariable($column);
+                if(!$var) throw new \Exception("Column `$column` is not defined!");
+                $this->row[$var] = $value;
+            }
         }
     }
 
     public function toArray(){
-        return $this->data;
-    }
-
-    //Pokud udelam tohle, tak
-    public function isAttached(){
-
+        return $this->row->toArray();
     }
 }
 

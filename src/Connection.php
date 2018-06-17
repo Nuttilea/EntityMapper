@@ -12,17 +12,15 @@ class Connection
     /** @var \Dibi\Connection */
     public $dibi;
 
-    public $defaultMapper;
 
     /**
      * Connection constructor.
      * @param \Dibi\Connection $dibi
      * @param $mapper
      */
-    public function __construct(\Dibi\Connection $dibi, $mapper = null)
+    public function __construct(\Dibi\Connection $dibi)
     {
         $this->dibi = $dibi;
-        $this->defaultMapper = $mapper ? $mapper : new \Nuttilea\Mapper();
     }
 
 }

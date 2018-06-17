@@ -1,8 +1,8 @@
 <?php
-
 namespace Test\classes;
 
-use Nuttilea\Entity;
+use Nuttilea\EntityMapper\Entity;
+
 
 /**
  * Class TagsEntity

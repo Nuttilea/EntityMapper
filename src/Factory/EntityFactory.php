@@ -10,18 +10,15 @@ namespace Nuttilea\EntityMapper\Factory;
 use Nuttilea\EntityMapper\Entity;
 use Nuttilea\EntityMapper\Exception\FactoryException;
 use Nuttilea\EntityMapper\Mapper;
+use Nuttilea\EntityMapper\Row;
 
 class EntityFactory {
-
-    /** @var Mapper */
-    private $mapper;
 
     /**
      * RepositoryFactory constructor.
      * @param Mapper $mapper
      */
-    public function __construct(Mapper $mapper) {
-        $this->mapper = $mapper;
+    public function __construct() {
     }
 
     /**
@@ -31,14 +28,18 @@ class EntityFactory {
      */
     public function create(string $entityName, $data = []) {
         if (is_subclass_of(Entity::class, $entityName)) throw new FactoryException("$entityName is not instance of " . Entity::class . '.');
+
+        /** @var Entity $entity */
+        $entity = null;
         try {
             $reflection = new \ReflectionClass($entityName);
-            /** @var Entity $entity */
-            $entity = $reflection->newInstance($this->mapper, $data);
-            return $entity;
+            if($data && !empty($data)){
+                $entity = $reflection->newInstance($data);
+            }
         } catch (\ReflectionException $reflectionException) {
             throw new FactoryException("Can't create instance of $entityName.");
         }
+        return $entity;
     }
 
 }
