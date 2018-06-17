@@ -9,6 +9,7 @@ namespace Nuttilea\EntityMapper;
 
 use Dibi\Fluent;
 use Nette\SmartObject;
+use Nuttilea\EntityMapper\Factory\EntityFactory;
 use Nuttilea\EntityMapper\Factory\RepositoryFactory;
 
 class Entity
@@ -19,6 +20,9 @@ class Entity
     /** @var Row */
     private $row;
 
+    private $referencedEntities = [];
+    private $referenceingEntities = [];
+
     /** @var []ReflectionEntity */
     protected static $reflections;
 
@@ -27,6 +31,13 @@ class Entity
 
     /** @var boolean */
     private $attached = false;
+
+    /** @var EntityFactory */
+    private $entityFactory;
+
+    /** @var Mapper */
+    private $mapper;
+
 
     /**
      * Repository constructor.
@@ -37,10 +48,6 @@ class Entity
             $this->row = $dataset;
         } else {
             $this->row = Result::createDetachedInstance()->getRow();
-            //SETUP DEFAULT VALUES
-            //            foreach ($this->getCurrentReflection()->getColumns() as $column) {
-            //                $this->__set($column);
-            //            }
         }
         if(!empty($dataset)) $this->assign($dataset);
     }
@@ -52,18 +59,70 @@ class Entity
 
     public function __get($name)
     {
-        $hasOne = $this->getCurrentReflection()->getHasOne();
-        if($hasOne && key_exists($name, $hasOne)){
-//            $this->mapper->getRepositoryByEntityClass(get_called_class());
+        $prop = $this->getCurrentReflection()->getProp($name);
+        $relationship = $prop->getRelationship();
+
+        if($relationship instanceof HasOne){
+            if(!isset($this->referencedEntities[$name])){
+                $refRow = $this->row->getReferencedRow($relationship->getTargetTable(), $relationship->getTargetTableColumn());
+                $entity = $this->entityFactory->create($this->mapper->getEntityReflectionByTable($relationship->getTargetTable())->getName(), $refRow);
+                $entity->makeAlive($this->entityFactory, $this->mapper);
+                $this->referencedEntities[$name] = $entity;
+            }
+            return $this->referencedEntities[$name];
+        }  elseif($relationship instanceof BelongsToOne){
+            if(!isset($this->referenceingEntities[$name])){
+                $refRows = $this->row->getReferencingRows($relationship->getTargetTable(), $relationship->getTargetTableColumn());
+                $count = count($refRows);
+                if ($count > 1) {
+                    throw new InvalidValueException(
+                        'There cannot be more than one entity referencing to entity ' . get_called_class(
+                        ) . " in property '{$prop->getName()}' with m:belongToOne relationship."
+                    );
+//                } elseif ($count === 0) {
+//                    if (!$prop->isNullable()) {
+//                        $name = $prop->getName();
+//                        throw new InvalidValueException("Property '$name' cannot be null in entity " . get_called_class() . '.');
+//                    }
+//                    return null;
+                } else {
+                    $refRow = $count === 1 ? array_shift($refRows) : null;
+                    $entity = $this->entityFactory->create($this->mapper->getEntityReflectionByTable($relationship->getTargetTable())->getName(), $refRow);
+                    $entity->makeAlive($this->entityFactory, $this->mapper);
+                    $this->referenceingEntities[$name][] = $entity;
+                }
+            }
+            return $this->referenceingEntities[$name];
+        } elseif ($relationship instanceof HasMany){
+            if(!isset($this->referenceingEntities[$name])){
+                $refRows = $this->row->getReferencingRows($relationship->getTargetTable(), $relationship->getTargetTableColumn());
+                foreach ($refRows as $refRow){
+                    $entity = $this->entityFactory->create($this->mapper->getEntityReflectionByTable($relationship->getTargetTable())->getName(), $refRow);
+                    $entity->makeAlive($this->entityFactory, $this->mapper);
+                    $this->referenceingEntities[$name][] = $entity;
+                }
+            }
+            return $this->referenceingEntities[$name];
+        }  elseif($relationship instanceof BelongsToMany){
+            if(!isset($this->referenceingEntities[$name])){
+                $refRows = $this->row->getReferencingRows($relationship->getTargetTable(), $relationship->getTargetTableColumn());
+                foreach ($refRows as $refRow){
+                    $entity = $this->entityFactory->create($this->mapper->getEntityReflectionByTable($relationship->getTargetTable())->getName(), $refRow);
+                    $entity->makeAlive($this->entityFactory, $this->mapper);
+                    $this->referenceingEntities[$name][] = $entity;
+                }
+            }
+            return $this->referenceingEntities[$name];
         }
-        dd($this->row->action);
-        return $this->row[$name];
+//        $belongsToMany = $this->getCurrentReflection()->getBelongsToMany($name);
+
+        return $this->row[$prop->getColumn()];
 
     }
 
     public function __set($name, $value)
     {
-        $this->data[$name] = $value;
+        $this->row[$name] = $value;
     }
 
     public static function getReflection() {
@@ -83,8 +142,10 @@ class Entity
         return $this->currentReflection;
     }
 
-    public function makeAlive(){
+    public function makeAlive(EntityFactory $entityFactory, Mapper $mapper){
         $this->attached = true;
+        $this->entityFactory = $entityFactory;
+        $this->mapper = $mapper;
     }
 
     public function getPrimaryValues(){
@@ -106,7 +167,8 @@ class Entity
         $reflection = $this->getCurrentReflection();
         foreach ($data as $column => $value){
             if(!$whiteList || in_array($column, $whiteList)){
-                $var = $reflection->getColumnVariable($column);
+                $prop = $reflection->getPropByColumn($column);
+                $var = $prop->getVariable();
                 if(!$var) throw new \Exception("Column `$column` is not defined!");
                 $this->row[$var] = $value;
             }

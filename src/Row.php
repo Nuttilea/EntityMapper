@@ -16,25 +16,38 @@ class Row implements \ArrayAccess {
     /** @var Result */
     private $result;
 
-    public function __construct(Result &$result, $id) {
+    private $data = [];
+
+
+    public function __construct($data, $id, Result $result) {
         $this->result = $result;
         $this->internalID = $id;
+        $this->data = $data;
     }
 
     public function __get($name) {
-        return $this->result->getRecordEntry($this->internalID, $name);
+        return $this->data[$name];
     }
 
     public function __set($name, $value) {
-        $this->result->setRecordEntry($this->internalID, $name, $value);
+        $this->data[$name] = $value;
     }
 
     public function __isset($name) {
-        $this->result->hasRecordEntry($this->internalID, $name);
+        return isset($this->data[$name]);
     }
 
+
     public function toArray(){
-        return $this->result->getRecord($this->internalID);
+        return $this->data;
+    }
+
+    public function getReferencedRow($table, $viaColumn){
+        return $this->result->getReferencedRow($this->internalID, $table, $viaColumn);
+    }
+
+    public function getReferencingRows($table, $viaColumn){
+        return $this->result->getReferencingRows($this->internalID, $table, $viaColumn);
     }
 
     /**

@@ -23,4 +23,16 @@ class Connection
         $this->dibi = $dibi;
     }
 
+    public function findIn($table, $column, $ids){
+
+//        dd($this->dibi->select('%n.*', $table)
+//            ->from('%n', $table)
+//            ->where('%n.%n IN %in ', $table, $column, $ids)
+//            ->test());
+        return $this->dibi->select('%n.*', $table)
+            ->from('%n', $table)
+            ->where('%n.%n IN %in', $table, $column, $ids)
+            ->execute()->setRowClass(null)->fetchAll();
+    }
+
 }

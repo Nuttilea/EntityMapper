@@ -70,11 +70,20 @@ class Mapper {
      * @return array
      */
     public function getPrimaries($entityClass) {
-        return $this->getReflectionEntity($entityClass)->getPrimary();
+        return $this->getReflectionEntity($entityClass)->getPrimaries();
     }
 
     public function getPrimary($entityClass){
-        $p = $this->getPrimaries($entityClass);
+        return $this->getReflectionEntity($entityClass)->getPrimary();
+    }
+
+    public function getEntityReflectionByTable($table){
+        return $this->getReflectionEntity($this->namespace.$this->getEntityName($table));
+    }
+
+    public function getPrimaryByTable($table){
+        $entityClass = $this->getEntityName($table);
+        $p = $this->getPrimaries($this->namespace.$entityClass);
         return array_shift($p);
     }
 

@@ -21,29 +21,41 @@ class Result implements \Iterator {
     /** @var bool */
     protected $attached = true;
 
-    protected $referencedRows = [];
+    protected $referenced = [];
+
+    protected $referencing = [];
+
 
     /** @var ReflectionEntity */
     protected $reflectionEntity;
 
-    protected $collection = [];
+    protected $rows = [];
 
     protected $keys = [];
+
+    protected $index = [];
 
     /** @var Mapper */
     protected $mapper;
 
 
-    private function __construct($collection = null, ReflectionEntity $reflectionEntity = null, Connection $connection = null, Mapper $mapper = null) {
+    private function __construct($rows = null, ReflectionEntity $reflectionEntity = null, Connection $connection = null, Mapper $mapper = null) {
         $this->reflectionEntity = $reflectionEntity;
         $this->connection = $connection;
         $this->mapper = $mapper;
-        $this->collection = $collection !== null ? $collection : [self::DETACHED_ROW_ID => []];
-        $this->attached = isset($collection) && $reflectionEntity && $collection && $mapper;
+        if($rows !== null){
+            foreach ($rows as $key => $row){
+                $this->rows[$key] = new Row($row, $key, $this);
+            }
+        } else {
+            $this->rows = [self::DETACHED_ROW_ID => new Row([], self::DETACHED_ROW_ID, $this)];
+        }
+        $this->attached = isset($rows) && $reflectionEntity && $rows && $mapper;
     }
 
     public static function createAttachedInstance($collection, ReflectionEntity $reflectionEntity, Connection $connection, Mapper $mapper){
-        $primaryKey = implode('#',$reflectionEntity->getPrimary());
+//        $primaryKey = implode('#', $reflectionEntity->getPrimaries());
+        $primaryKey = $reflectionEntity->getPrimary();
         $dataCollection = [];
         foreach ($collection as $row) {
             $row = (array) $row;
@@ -66,44 +78,93 @@ class Result implements \Iterator {
             $id = self::DETACHED_ROW_ID;
         }
 
-        return !isset($this->collection[$id]) ? null : new Row($this, $id);
+        return !isset($this->rows[$id]) ? null : $this->rows[$id];
     }
 
-    public function getRecord($rowId){
-        if(!isset($this->collection[$rowId])){
-            throw new \InvalidArgumentException("Missing row with ID $rowId.");
+
+
+    public function getReferencedRow($id, $table, $viaColumn) {
+        $result = $this->getReferencingResult($table, $viaColumn);
+        $rowId = $this->getRow($id)[$viaColumn];
+        return $result->getRow($rowId);
+    }
+
+    public function getReferencingRows($id, $table, $viaColumn){
+        $result = $this->getReferencingResult($table, $viaColumn);
+        $resultHash = spl_object_hash($result);
+        if(!isset($this->index[$resultHash])){
+            $this->index[$resultHash] = [];
+            foreach ($result as $internalID => $row){
+                $this->index[$resultHash][$row[$viaColumn]][] = new Row($row, $internalID, $result);
+            }
         }
-        return $this->collection[$rowId];
-    }
-
-    public function getRecordPointer($rowId){
-        if(!isset($this->collection[$rowId])){
-            throw new \InvalidArgumentException("Missing row with ID $rowId.");
+        if (!isset($this->index[$resultHash][$id])) {
+            return [];
         }
-        return $this->collection[$rowId];
+        return $this->index[$resultHash][$id];
     }
 
-    public function getRecordEntry($rowId, $column){
-        if(!isset($this->collection[$rowId])){
-            throw new \InvalidArgumentException("Missing row with ID $rowId.");
+    /** @return Result */
+    public function getReferencingResult($table, $viaColumn){
+        $key = "$table{$viaColumn}";
+        if(isset($this->referencing[$key])){
+            return $this->referencing[$key];
         }
-        if (!array_key_exists($column, $this->collection[$rowId])) {
-            throw new \InvalidArgumentException("Missing '$column' column in row with id $rowId.");
+        $reflectionEntity = $this->mapper->getEntityReflectionByTable($table);
+
+        $res = $this->connection->findIn($table, $viaColumn, $this->getIds($reflectionEntity->getPrimary()));
+        return $this->referencing[$key] = self::createAttachedInstance($res, $reflectionEntity, $this->connection, $this->mapper);
+    }
+
+    /** @return Result */
+    public function getReferencedResult($table, $viaColumn){
+        $key = "$table{$viaColumn}";
+        if(isset($this->referenced[$key])){
+            return $this->referenced[$key];
         }
-        return $this->collection[$rowId][$column];
+
+        $reflectionEntity = $this->mapper->getEntityReflectionByTable($table);
+        $res = $this->connection->findIn($table, $reflectionEntity->getPrimary(), $this->getIds($viaColumn));
+        return $this->referenced[$key] = self::createAttachedInstance($res, $reflectionEntity, $this->connection, $this->mapper);
     }
 
-    public function setRecordEntry($rowId, $column, $value){
-        if(!isset($this->collection[$rowId])){
-            throw new \InvalidArgumentException("Missing row with ID $rowId.");
+    /**
+     * @param string $column
+     * @return array
+     */
+    private function getIds($column)
+    {
+        $ids = [];
+        foreach ($this->rows as $item) {
+            if (!isset($item[$column]) or $item[$column] === null) {
+                continue;
+            }
+            $ids[$item[$column]] = true;
         }
-
-        return $this->collection[$rowId][$column] = $value;
+        return array_keys($ids);
     }
 
-    public function hasRecordEntry($id, $column){
-        return isset($this->collection[$id]) && array_key_exists($column, $this->collection[$id]);
-    }
+//    public function getRecordEntry($rowId, $column){
+//        if(!isset($this->rows[$rowId])){
+//            throw new \InvalidArgumentException("Missing row with ID (`$column`) $rowId.");
+//        }
+//        if (!array_key_exists($column, $this->rows[$rowId])) {
+//            throw new \InvalidArgumentException("Missing '$column' column in row with ID $rowId.");
+//        }
+//        return $this->rows[$rowId][$column];
+//    }
+
+//    public function setRecordEntry($rowId, $column, $value){
+//        if(!isset($this->rows[$rowId])){
+//            throw new \InvalidArgumentException("Missing row with ID $rowId.");
+//        }
+//
+//        return $this->rows[$rowId][$column] = $value;
+//    }
+//
+//    public function hasRecordEntry($id, $column){
+//        return isset($this->rows[$id]) && array_key_exists($column, $this->rows[$id]);
+//    }
 
     public function isDetached(){
         return !$this->attached;
@@ -117,7 +178,7 @@ class Result implements \Iterator {
      */
     public function current() {
         $key = current($this->keys);
-        return $this->collection[$key];
+        return $this->rows[$key];
     }
 
     /**
@@ -158,7 +219,7 @@ class Result implements \Iterator {
      * @since 5.0.0
      */
     public function rewind() {
-        $this->keys = array_keys($this->collection);
+        $this->keys = array_keys($this->rows);
         reset($this->keys);
     }
 }

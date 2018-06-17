@@ -83,7 +83,9 @@ class Repository {
         $primaryKey = $this->mapper->getPrimary($className);
         $result = Result::createAttachedInstance([$data], $this->mapper->getReflectionEntity($className), $this->connection, $this->mapper);
         $row = $result->getRow($data[$primaryKey]);
-        return $this->entityFactory->create($this->getEntityClass(), $row);
+        $entity = $this->entityFactory->create($this->getEntityClass(), $row);
+        $entity->makeAlive($this->entityFactory, $this->mapper);
+        return $entity;
     }
 
     /**
