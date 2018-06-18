@@ -111,6 +111,7 @@ class Entity
                     $entity->makeAlive($this->entityFactory, $this->mapper);
                     $this->referenceingEntities[$name][] = $entity;
                 }
+                if(!isset($this->referenceingEntities[$name])) $this->referenceingEntities[$name] = [];
             }
             return $this->referenceingEntities[$name];
         }

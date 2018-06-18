@@ -77,7 +77,6 @@ class Result implements \Iterator {
         if($this->isDetached()){
             $id = self::DETACHED_ROW_ID;
         }
-
         return !isset($this->rows[$id]) ? null : $this->rows[$id];
     }
 

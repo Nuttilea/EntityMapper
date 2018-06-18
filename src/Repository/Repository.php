@@ -71,10 +71,17 @@ class Repository {
     //    }
 
     public function createEntities(array $data) {
-        $self = $this;
-        return array_map(function ($item) use ($self) {
-            return $this->entityFactory->create($this->getEntityClass(), $item->toArray());
-        }, $data);
+        $ret = [];
+        $className = $this->mapper->getEntityByRepositoryClass(get_called_class());
+        $result = Result::createAttachedInstance($data, $this->mapper->getReflectionEntity($className), $this->connection, $this->mapper);
+        foreach ($data as $item) {
+            $primaryKey = $this->mapper->getPrimary($className);
+            $row = $result->getRow($item[$primaryKey]);
+            $entity = $this->entityFactory->create($this->getEntityClass(), $row);
+            $entity->makeAlive($this->entityFactory, $this->mapper);
+            $ret[] = $entity;
+        }
+        return $ret;
     }
 
     public function createEntity($data) {
