@@ -12,7 +12,7 @@ use Nuttilea\EntityMapper\Entity;
  *
  * @property int $id orm:column(ID) orm:primary
  * @property int $tag orm:column
- *
+ * @property object[] $ints orm:column(ID)
  */
 class Tags extends Entity
 {

@@ -21,12 +21,13 @@ class OrmAnotationPareser
     public static function parseOrmPropertiesTags($properties){
         $res = [];
         static $tokens = ['true' => true, 'false' => false, 'null' => null, '' => true];
-
         $regexp_orm ='~((?<='.self::RE_SNAME.')'.self::RE_IDENTIFIER.') [ \t]* (\((?> '.self::RE_STRING.' | [^\'")@]+)+\) | (?>(?!'.self::RE_SNAME.'|  [\n\r]).)* |  )~mx';
         foreach ($properties as $prop){
-            $match = Strings::match($prop, '~^(\w*(?>\s)*)?([$]\w*)?~mx');
-
+            
+            $match = Strings::match($prop, '~^(\w*\[?\]?(?>\s)*)?([$]\w*)?~mx');
+            
             list(,$type,$variable) = $match;
+            
             if($match && $variable )
             {
                 $variable = substr($variable, 1);
@@ -43,6 +44,7 @@ class OrmAnotationPareser
                             $value,
                             '#\s*,\s*(?>(' . self::RE_IDENTIFIER . ')\s*=\s*)?(' . self::RE_STRING . '|[^\'"),\s][^\'"),]*)#A')){
                             $value = substr($value, strlen($v[0]));
+                            
                             list(, $key, $val) = $v;
                             $val = rtrim($val);
                             if ($val[0] === "'" || $val[0] === '"') {
@@ -55,7 +57,6 @@ class OrmAnotationPareser
                                 $lval = strtolower($val);
                                 $val = array_key_exists($lval, $tokens) ? $tokens[$lval] : $val;
                             }
-
                             if ($key === '') {
                                 $items[] = $val;
 
@@ -63,7 +64,6 @@ class OrmAnotationPareser
                                 $items[$key] = $val;
                             }
                         }
-
                         $value = count($items) < 2 && $key === '' ? $val : $items;
                     } else {
                         $value = trim($value);

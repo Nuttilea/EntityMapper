@@ -31,7 +31,6 @@ class ReflectionEntity extends \ReflectionClass {
                 if ((is_array($property['column']) || $property['column'] instanceof \Countable) && count($property['column']) > 1) throw new IncorrectAnotationException("Annotation @column on property $property->name is there more than one time.");
                 $column = $property['column'];
                 if ($column === true) $column = $var;
-
                 $prop->setColumn($column);
 
                 if (key_exists('primary', $property)) {

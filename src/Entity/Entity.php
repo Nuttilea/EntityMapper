@@ -18,7 +18,7 @@ class Entity
     use SmartObject;
 
     /** @var Row */
-    private $row;
+    protected $row;
 
     private $referencedEntities = [];
     private $referenceingEntities = [];

@@ -111,7 +111,7 @@ class Result implements \Iterator {
         }
         $reflectionEntity = $this->mapper->getEntityReflectionByTable($table);
 
-        $res = $this->connection->findIn($table, $viaColumn, $this->getIds($reflectionEntity->getPrimary()));
+        $res = $this->connection->findIn($table, $viaColumn, $this->getIds($this->reflectionEntity->getPrimary()));
         return $this->referencing[$key] = self::createAttachedInstance($res, $reflectionEntity, $this->connection, $this->mapper);
     }
 
@@ -121,7 +121,7 @@ class Result implements \Iterator {
         if(isset($this->referenced[$key])){
             return $this->referenced[$key];
         }
-
+        dd();
         $reflectionEntity = $this->mapper->getEntityReflectionByTable($table);
         $res = $this->connection->findIn($table, $reflectionEntity->getPrimary(), $this->getIds($viaColumn));
         return $this->referenced[$key] = self::createAttachedInstance($res, $reflectionEntity, $this->connection, $this->mapper);
