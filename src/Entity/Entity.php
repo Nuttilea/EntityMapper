@@ -59,9 +59,17 @@ class Entity
 
     public function __get($name)
     {
-        $prop = $this->getCurrentReflection()->getProp($name);
-        $relationship = $prop->getRelationship();
 
+        if( strlen($name) > 5 && lcfirst(substr($name, 0,5)) === 'value' ){
+            d($name);
+            $name = lcfirst(substr($name, 5));
+            d("????");
+            $prop = $this->getCurrentReflection()->getProp($name);
+            return $this->row[$prop->getColumn()];
+        }
+        $prop = $this->getCurrentReflection()->getProp($name);
+
+        $relationship = $prop->getRelationship();
         if($relationship instanceof HasOne){
             if(!isset($this->referencedEntities[$name])){
                 $refRow = $this->row->getReferencedRow($relationship->getTargetTable(), $relationship->getTargetTableColumn());
@@ -79,12 +87,6 @@ class Entity
                         'There cannot be more than one entity referencing to entity ' . get_called_class(
                         ) . " in property '{$prop->getName()}' with m:belongToOne relationship."
                     );
-//                } elseif ($count === 0) {
-//                    if (!$prop->isNullable()) {
-//                        $name = $prop->getName();
-//                        throw new InvalidValueException("Property '$name' cannot be null in entity " . get_called_class() . '.');
-//                    }
-//                    return null;
                 } else {
                     $refRow = $count === 1 ? array_shift($refRows) : null;
                     $entity = $this->entityFactory->create($this->mapper->getEntityReflectionByTable($relationship->getTargetTable())->getName(), $refRow);
@@ -104,6 +106,7 @@ class Entity
             }
             return $this->referenceingEntities[$name];
         }  elseif($relationship instanceof BelongsToMany){
+//            d($name);
             if(!isset($this->referenceingEntities[$name])){
                 $refRows = $this->row->getReferencingRows($relationship->getTargetTable(), $relationship->getTargetTableColumn());
                 foreach ($refRows as $refRow){

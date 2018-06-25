@@ -47,6 +47,7 @@ class Row implements \ArrayAccess {
     }
 
     public function getReferencingRows($table, $viaColumn){
+
         return $this->result->getReferencingRows($this->internalID, $table, $viaColumn);
     }
 

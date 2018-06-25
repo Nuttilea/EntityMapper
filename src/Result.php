@@ -94,12 +94,14 @@ class Result implements \Iterator {
         if(!isset($this->index[$resultHash])){
             $this->index[$resultHash] = [];
             foreach ($result as $internalID => $row){
+//                d($row[$viaColumn], $viaColumn);
                 $this->index[$resultHash][$row[$viaColumn]][] = new Row($row, $internalID, $result);
             }
         }
         if (!isset($this->index[$resultHash][$id])) {
             return [];
         }
+
         return $this->index[$resultHash][$id];
     }
 
@@ -121,7 +123,6 @@ class Result implements \Iterator {
         if(isset($this->referenced[$key])){
             return $this->referenced[$key];
         }
-        dd();
         $reflectionEntity = $this->mapper->getEntityReflectionByTable($table);
         $res = $this->connection->findIn($table, $reflectionEntity->getPrimary(), $this->getIds($viaColumn));
         return $this->referenced[$key] = self::createAttachedInstance($res, $reflectionEntity, $this->connection, $this->mapper);
