@@ -71,9 +71,4 @@ class Property {
     public function setRelationship($relationship) {
         $this->relationship = $relationship;
     }
-
-
-
-
-
 }

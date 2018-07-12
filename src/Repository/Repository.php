@@ -78,7 +78,7 @@ class Repository {
             $primaryKey = $this->mapper->getPrimary($className);
             $row = $result->getRow($item[$primaryKey]);
             $entity = $this->entityFactory->create($this->getEntityClass(), $row);
-            $entity->makeAlive($this->entityFactory, $this->mapper);
+            $entity->makeAlive($this->entityFactory, $this->mapper, $this->connection);
             $ret[] = $entity;
         }
         return $ret;
@@ -91,7 +91,7 @@ class Repository {
         $result = Result::createAttachedInstance([$data], $this->mapper->getReflectionEntity($className), $this->connection, $this->mapper);
         $row = $result->getRow($data[$primaryKey]);
         $entity = $this->entityFactory->create($this->getEntityClass(), $row);
-        $entity->makeAlive($this->entityFactory, $this->mapper);
+        $entity->makeAlive($this->entityFactory, $this->mapper, $this->connection);
         return $entity;
     }
 
@@ -119,19 +119,60 @@ class Repository {
         return true;
     }
 
+    public function persist($entity){
+        if($entity instanceof Entity){
+//            $referenced = $entity->getReferenced();
+//            $referencing = $entity->getReferencing();
+            if($entity->isAttached()) /* UPDATE */ {
+               $this->update($entity);
+            } else /* INSERT */ {
+                $returnPrimary = !empty($entity->getPrimaryValues());
+                $id = $this->insert($entity, $returnPrimary);
+                $entity->makeAlive($this->entityFactory, $this->mapper, $this->connection);
+                $entity->attach($id);
+//                dd($entity, $entity->isAttached());
+            }
+//            $this->persistBelongsToMany($referencing);
+        } else {
+            return false;
+        }
+        return true;
+    }
+
     /**
-     * @param $data
+     * TODO: IS NOT IMPLEMENTED YET
+     * @param Entity[] $items
+     */
+    protected function persistBelongsToMany(array $items){
+        $bulkInsert = [];
+        foreach ($items as $item){
+            $row = $item->toArray();
+            $row['FOREGIN_KEY'] = 'FOREGIN_KEY';
+            $bulkInsert[] = $row;
+        }
+
+
+    }
+
+    public function insertBulk(array $rows){
+        $rawRows = $this->extractRawRows($rows);
+        $this->dibi->insert($this->getTableName(), $rawRows);
+    }
+
+    /**
+     * @param $row
      * @param bool $retPrimary
      * @return bool|mixed
      * @throws Exception
      */
-    public function insert($data, $retPrimary = false) {
-        if ($data instanceof Entity) {
-            $data = $data->toArray();
+    public function insert($row, $retPrimary = false) {
+        if ($row instanceof Entity) {
+            $row = $row->toArray();
         }
         try {
-            $this->dibi->insert($this->getTableName(), $data)->execute();
-            return $retPrimary ? $this->dibi->getInsertId() : true;
+//            dd($this->dibi->insert($this->getTableName(), $row)->test());
+            $this->dibi->insert($this->getTableName(), $row)->execute();
+            return $retPrimary ? $this->dibi->getInsertId() : null;
         } catch (\Dibi\Exception $e) {
             throw new Exception($e->getMessage(), $e->getCode(), $e);
         }
@@ -151,7 +192,7 @@ class Repository {
         } catch (\Dibi\Exception $e) {
             throw new Exception($e->getMessage(), $e->getCode(), $e);
         }
-
+        return true;
     }
 
     public function findById($id) {
@@ -196,5 +237,20 @@ class Repository {
 
         return $this->createEntity($row);
     }
+
+    private function extractRawRows(array $rows){
+        $rawRows = [];
+        foreach ($rows as $row){
+            if($row instanceof Entity) {
+                $rawRows[] = $row->toArray();
+            } else if(is_array($row)) {
+                $rawRows[] = $row();
+            } else {
+                throw new Exception("Item `$row` isn't instance of Entity or array");
+            }
+        }
+        return $rawRows;
+    }
+
 
 }

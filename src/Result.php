@@ -9,6 +9,7 @@
 namespace Nuttilea\EntityMapper;
 
 
+use Nette\InvalidStateException;
 use Nuttilea\EntityMapper\Exception\Exception;
 
 class Result implements \Iterator {
@@ -45,10 +46,10 @@ class Result implements \Iterator {
         $this->mapper = $mapper;
         if($rows !== null){
             foreach ($rows as $key => $row){
-                $this->rows[$key] = new Row($row, $key, $this);
+                $this->rows[$key] = $row;
             }
         } else {
-            $this->rows = [self::DETACHED_ROW_ID => new Row([], self::DETACHED_ROW_ID, $this)];
+            $this->rows = [self::DETACHED_ROW_ID => []];
         }
         $this->attached = isset($rows) && $reflectionEntity && $rows && $mapper;
     }
@@ -72,19 +73,36 @@ class Result implements \Iterator {
         return new self();
     }
 
-    public function getRow($id = null, $asArray = false){
-
-        if($this->isDetached()){
-            $id = self::DETACHED_ROW_ID;
-        }
-        return !isset($this->rows[$id]) ? null : $this->rows[$id];
+    public function getRowRecord($rowId, $name){
+        return $this->rows[$rowId][$name];
     }
 
+    public function setRowRecord($rowId, $name, $value){
+        $this->rows[$rowId][$name] = $value;
+    }
 
+    public function issetRowRecord($rowId, $name){
+        return isset($this->rows[$rowId]) && isset($this->rows[$rowId][$name]);
+    }
 
-    public function getReferencedRow($id, $table, $viaColumn) {
-        $result = $this->getReferencingResult($table, $viaColumn);
-        $rowId = $this->getRow($id)[$viaColumn];
+    public function unsetRowRecord($rowId, $name){
+        unset($this->rows[$rowId][$name]);
+    }
+
+    public function getRowRecords($rowId){
+        return $this->rows[$rowId];
+    }
+
+    public function getRow($id = null, $asArray = false){
+        if(!$this->isAtached()){
+            $id = self::DETACHED_ROW_ID;
+        }
+        return !isset($this->rows[$id]) ? null : new RowPointer($id, $this);
+    }
+
+    public function getReferencedRow($id, $currentColumn, $table, $targetColumn) {
+        $result = $this->getReferencedResult($table, $currentColumn);
+        $rowId = $result->getRow($id)[$targetColumn];
         return $result->getRow($rowId);
     }
 
@@ -93,15 +111,13 @@ class Result implements \Iterator {
         $resultHash = spl_object_hash($result);
         if(!isset($this->index[$resultHash])){
             $this->index[$resultHash] = [];
-            foreach ($result as $internalID => $row){
-//                d($row[$viaColumn], $viaColumn);
-                $this->index[$resultHash][$row[$viaColumn]][] = new Row($row, $internalID, $result);
+            foreach ($result as $referencingId => $row){
+                $this->index[$resultHash][$row[$viaColumn]][] = new RowPointer($referencingId, $result);
             }
         }
         if (!isset($this->index[$resultHash][$id])) {
             return [];
         }
-
         return $this->index[$resultHash][$id];
     }
 
@@ -112,19 +128,23 @@ class Result implements \Iterator {
             return $this->referencing[$key];
         }
         $reflectionEntity = $this->mapper->getEntityReflectionByTable($table);
-
+//        dd($table, $viaColumn, $this->mapper, $this->connection, $this->getIds($this->reflectionEntity->getPrimary()));
         $res = $this->connection->findIn($table, $viaColumn, $this->getIds($this->reflectionEntity->getPrimary()));
         return $this->referencing[$key] = self::createAttachedInstance($res, $reflectionEntity, $this->connection, $this->mapper);
     }
 
     /** @return Result */
     public function getReferencedResult($table, $viaColumn){
-        $key = "$table{$viaColumn}";
+        $key = "$table#{$viaColumn}";
         if(isset($this->referenced[$key])){
             return $this->referenced[$key];
         }
         $reflectionEntity = $this->mapper->getEntityReflectionByTable($table);
+
         $res = $this->connection->findIn($table, $reflectionEntity->getPrimary(), $this->getIds($viaColumn));
+//        d($table, $viaColumn);
+
+//        dd(self::createAttachedInstance($res, $reflectionEntity, $this->connection, $this->mapper));
         return $this->referenced[$key] = self::createAttachedInstance($res, $reflectionEntity, $this->connection, $this->mapper);
     }
 
@@ -144,30 +164,43 @@ class Result implements \Iterator {
         return array_keys($ids);
     }
 
-//    public function getRecordEntry($rowId, $column){
-//        if(!isset($this->rows[$rowId])){
-//            throw new \InvalidArgumentException("Missing row with ID (`$column`) $rowId.");
-//        }
-//        if (!array_key_exists($column, $this->rows[$rowId])) {
-//            throw new \InvalidArgumentException("Missing '$column' column in row with ID $rowId.");
-//        }
-//        return $this->rows[$rowId][$column];
-//    }
 
-//    public function setRecordEntry($rowId, $column, $value){
-//        if(!isset($this->rows[$rowId])){
-//            throw new \InvalidArgumentException("Missing row with ID $rowId.");
-//        }
-//
-//        return $this->rows[$rowId][$column] = $value;
-//    }
-//
-//    public function hasRecordEntry($id, $column){
-//        return isset($this->rows[$id]) && array_key_exists($column, $this->rows[$id]);
-//    }
+    public function setConnection(Connection $connection){
+        $this->connection = $connection;
+    }
 
-    public function isDetached(){
-        return !$this->attached;
+    public function setMapper(Mapper $mapper){
+        $this->mapper = $mapper;
+    }
+
+    public function setReflectionEntity(ReflectionEntity $reflectionEntity){
+        $this->reflectionEntity = $reflectionEntity;
+    }
+
+    public function makeAlive(Mapper $mapper, Connection $connection) {
+        $this->mapper = $mapper;
+        $this->connection = $connection;
+    }
+
+    public function attach($id, $tableName){
+        if ($this->isAtached()) {
+            throw new InvalidStateException('Result is not in detached state.');
+        }
+        if ($this->connection === null) {
+            throw new InvalidStateException('Missing connection.');
+        }
+        if ($this->mapper === null) {
+            throw new InvalidStateException('Missing mapper.');
+        }
+
+        $this->rows[$id] = $this->rows[-1];
+        unset($this->rows[-1]);
+        $this->attached = true;
+
+    }
+
+    public function isAtached(){
+        return $this->attached;
     }
 
     /**

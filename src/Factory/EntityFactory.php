@@ -10,7 +10,7 @@ namespace Nuttilea\EntityMapper\Factory;
 use Nuttilea\EntityMapper\Entity;
 use Nuttilea\EntityMapper\Exception\FactoryException;
 use Nuttilea\EntityMapper\Mapper;
-use Nuttilea\EntityMapper\Row;
+use Nuttilea\EntityMapper\RowPointer;
 
 class EntityFactory {
 

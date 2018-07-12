@@ -72,7 +72,15 @@ class ReflectionEntity extends \ReflectionClass {
      * @return Property
      */
     public function getProp($name) {
-        return $this->props[$name];
+        return array_key_exists($name, $this->props) ? $this->props[$name] : null;
+    }
+
+    /**
+     * @param $column
+     * @return Property
+     */
+    public function hasPropByColumn($column){
+        return array_key_exists($column, $this->columns);
     }
 
     /**

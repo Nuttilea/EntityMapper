@@ -9,6 +9,7 @@
 namespace Nuttilea\EntityMapper;
 
 class HasOne {
+
     private $targetTableColumn;
 
     private $targetTable;

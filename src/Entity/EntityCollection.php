@@ -2,53 +2,43 @@
 /**
  * Created by PhpStorm.
  * User: Antonin Sajboch
- * Date: 6/16/18
- * Time: 3:51 PM
+ * Date: 7/10/18
+ * Time: 6:31 PM
  */
 
 namespace Nuttilea\EntityMapper;
 
 
-class Row implements \ArrayAccess {
+use Nuttilea\EntityMapper\Exception\Exception;
 
-    private $internalID;
+class EntityCollection implements \ArrayAccess {
 
-    /** @var Result */
-    private $result;
+    /**
+     * @var Entity[]
+     */
+    protected $entities = [];
 
-    private $data = [];
-
-
-    public function __construct($data, $id, Result $result) {
-        $this->result = $result;
-        $this->internalID = $id;
-        $this->data = $data;
+    public function __construct(array $rows) {
+        foreach ($rows as $row) {
+            if($row instanceof Entity || is_array($row)) {
+                $this->addEntity($row);
+            } else {
+                throw new Exception("Item `$row` isn't instance of Entity or array");
+            }
+        }
+    }
+    public static function createEntityCollection(array $data){
+        return new self($data);
     }
 
-    public function __get($name) {
-        return $this->data[$name];
-    }
-
-    public function __set($name, $value) {
-        $this->data[$name] = $value;
-    }
-
-    public function __isset($name) {
-        return isset($this->data[$name]);
-    }
-
-
-    public function toArray(){
-        return $this->data;
-    }
-
-    public function getReferencedRow($table, $viaColumn){
-        return $this->result->getReferencedRow($this->internalID, $table, $viaColumn);
-    }
-
-    public function getReferencingRows($table, $viaColumn){
-
-        return $this->result->getReferencingRows($this->internalID, $table, $viaColumn);
+    public function addEntity($entity){
+        if($entity instanceof Entity ){
+            $this->entities[spl_object_hash($entity)] = $entity->toArray();
+        } elseif(is_array($entity)){
+            $this->entities[spl_object_hash($entity)] = $entity;
+        } else {
+            throw new Exception("Item `$entity` isn't instance of Entity or array");
+        }
     }
 
     /**
@@ -64,7 +54,7 @@ class Row implements \ArrayAccess {
      * @since 5.0.0
      */
     public function offsetExists($offset) {
-        return $this->__isset($offset);
+        return isset($this->entities[$offset]);
     }
 
     /**
@@ -77,7 +67,7 @@ class Row implements \ArrayAccess {
      * @since 5.0.0
      */
     public function offsetGet($offset) {
-        return $this->__get($offset);
+        return $this->entities[$offset];
     }
 
     /**
@@ -93,7 +83,7 @@ class Row implements \ArrayAccess {
      * @since 5.0.0
      */
     public function offsetSet($offset, $value) {
-        $this->__set($offset, $value);
+        $this->entities[$offset] = $value;
     }
 
     /**
@@ -106,6 +96,6 @@ class Row implements \ArrayAccess {
      * @since 5.0.0
      */
     public function offsetUnset($offset) {
-        die("FUCK WHAT TO DO");
+        unset($this->entities[$offset]);
     }
 }
