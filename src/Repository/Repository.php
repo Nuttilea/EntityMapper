@@ -8,6 +8,7 @@
 
 namespace Nuttilea\EntityMapper;
 
+use App\Model\Database\Entities\Tasks;
 use Dibi\Fluent;
 use Nuttilea\EntityMapper\Exception\Exception;
 use Nuttilea\EntityMapper\Factory\EntityFactory;
@@ -169,6 +170,17 @@ class Repository {
         if ($row instanceof Entity) {
             $row = $row->toArray();
         }
+        
+        //TODO: check this, it allows to send directly the object instead of knowing wich is the primary colum, but work only if one column is primary
+        foreach($data as $key => $value){
+            if(is_object($value) && $primary = $value->getPrimaryValues()){
+                if(is_array($primary) && count($primary) === 1){
+                    $col = array_keys($primary)[0];
+                    $data[$key] = $data[$key]->$col;
+                }
+            }
+        }
+        
         try {
 //            dd($this->dibi->insert($this->getTableName(), $row)->test());
             $this->dibi->insert($this->getTableName(), $row)->execute();
