@@ -2,13 +2,9 @@
 /**
  * Created by PhpStorm.
  * User: Antonin Sajboch
- * Date: 6/17/18
- * Time: 2:01 PM
+ * Date: 7/21/18
+ * Time: 9:28 PM
  */
 
 namespace Nuttilea\EntityMapper;
 
-class HasOne extends Relationship {
-
-
-}

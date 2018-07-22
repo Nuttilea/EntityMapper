@@ -31,10 +31,10 @@ class ResultTest extends Tester\TestCase
     private $results;
 
     private $data = [
-        ['ID' => 100, 'tag' => 'a'],
-        ['ID' => 200, 'tag' => 'b'],
-        ['ID' => 300, 'tag' => 'c'],
-        ['ID' => 400, 'tag' => 'd'],
+        ['ID' => 100, 'scraperTag' => 'a'],
+        ['ID' => 200, 'scraperTag' => 'b'],
+        ['ID' => 300, 'scraperTag' => 'c'],
+        ['ID' => 400, 'scraperTag' => 'd'],
     ];
 
     public function __construct(Nette\DI\Container $container)
@@ -61,10 +61,10 @@ class ResultTest extends Tester\TestCase
             }
         }
 
-        Tester\Assert::equal($result->getRowEntry(100, 'tag'), 'a');
-        Tester\Assert::equal($result->getRowEntry(200, 'tag'), 'b');
-        Tester\Assert::equal($result->getRowEntry(300, 'tag'), 'c');
-        Tester\Assert::equal($result->getRowEntry(400, 'tag'), 'd');
+        Tester\Assert::equal($result->getRowEntry(100, 'scraperTag'), 'a');
+        Tester\Assert::equal($result->getRowEntry(200, 'scraperTag'), 'b');
+        Tester\Assert::equal($result->getRowEntry(300, 'scraperTag'), 'c');
+        Tester\Assert::equal($result->getRowEntry(400, 'scraperTag'), 'd');
     }
 
 

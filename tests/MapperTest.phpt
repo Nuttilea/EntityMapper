@@ -36,13 +36,13 @@ class MapperTest extends Tester\TestCase
     }
 
     public function testGetTableName(){
-        Assert::equal('Tags', $this->mapper->getTableName('Tags'));
+        Assert::equal('scraperTag', $this->mapper->getTableName('scraperTag'));
         Assert::equal('User', $this->mapper->getTableName('User'));
         Assert::equal('UserHasTags', $this->mapper->getTableName('UserHasTags'));
     }
 
     public function testGetEntityName(){
-        Assert::equal('Tags', $this->mapper->getEntityName('tags'));
+        Assert::equal('scraperTag', $this->mapper->getEntityName('scraperTag'));
         Assert::equal('User', $this->mapper->getEntityName('user'));
         Assert::equal('UserHasTags', $this->mapper->getEntityName('userHasTags'));
     }
@@ -50,7 +50,7 @@ class MapperTest extends Tester\TestCase
     public function testGetColumnVariable(){
        $reflection =  new ReflectionEntity(Tags::class);
        Assert::equal('id', $this->mapper->getColumnVariable($reflection, 'ID'));
-       Assert::equal('tag', $this->mapper->getColumnVariable($reflection, 'tag'));
+       Assert::equal('scraperTag', $this->mapper->getColumnVariable($reflection, 'scraperTag'));
     }
 
     public function testGetPrimary(){
@@ -58,7 +58,7 @@ class MapperTest extends Tester\TestCase
     }
 
     public function testGetTebaleNameByRepository(){
-	    Assert::equal('Tags', $this->mapper->getTableByRepositoryClass('A\B\C\TagsRepository'));
+	    Assert::equal('scraperTag', $this->mapper->getTableByRepositoryClass('A\B\C\TagsRepository'));
         Assert::equal('Users', $this->mapper->getTableByRepositoryClass('A\B\C\UsersRepository'));
         Assert::equal('UserHasTags', $this->mapper->getTableByRepositoryClass('A\B\C\UserHasTagsRepository'));
     }

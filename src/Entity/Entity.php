@@ -5,6 +5,7 @@
  * Date: 2/6/18
  * Time: 11:37 PM
  */
+
 namespace Nuttilea\EntityMapper;
 
 use Dibi\Fluent;
@@ -13,8 +14,7 @@ use Nuttilea\EntityMapper\Exception\Exception;
 use Nuttilea\EntityMapper\Factory\EntityFactory;
 use Nuttilea\EntityMapper\Factory\RepositoryFactory;
 
-class Entity
-{
+class Entity implements \ArrayAccess {
 
     use SmartObject;
 
@@ -44,46 +44,44 @@ class Entity
     /**
      * Repository constructor.
      */
-    public function __construct($dataset = null) {
+    public function __construct($dataset = []) {
         //INIT DATASET
-        if($dataset instanceof RowPointer){
+        if ($dataset instanceof RowPointer) {
             $this->row = $dataset;
         } else {
-
             $this->row = Result::createDetachedInstance()->getRow();
-            if(!empty($dataset)) $this->assign($dataset);
+            if (!empty($dataset)) $this->assign($dataset);
         }
     }
 
     public function __call($name, $arguments) {
-        die($name);
+        throw new \BadMethodCallException("Method $name is not exists.");
     }
 
     //TODO: NEED TO TEST THIS
-    public function __set($name, $value)
-    {
+    public function __set($name, $value) {
         //TODO: RENEMAE NAME TO COLUMN BECAUSE NAME IS NOT COLUMN THEN REWRITE IT
         $property = $this->getCurrentReflection()->getProp($name);
-        if(!$property) throw new Exception("Property `$name` isn't exists!");
+        if (!$property) throw new Exception("Property `$name` isn't exists!");
         $relationship = $property->getRelationship();
-        if($relationship instanceof BelongsToMany){
-            if(!is_array($value)) {
+        if ($relationship instanceof BelongsToMany) {
+            if (!is_array($value)) {
                 throw new Exception("Property `$name` needs array!");
             }
             //Only for checkings if all items of arrays are Entities
             foreach ($value as $entity) {
-                if(!$entity instanceof Entity){
+                if (!$entity instanceof Entity) {
                     throw new Exception('Each item of array must be instance of Entity.');
                 }
                 $this->referenceingEntities[$name][] = $entity;
             }
-        } else if($value instanceof Entity) {
-            if($relationship instanceof HasOne) {
+        } else if ($value instanceof Entity) {
+            if ($relationship instanceof HasOne) {
                 $this->referencedEntities[$name] = $value;
-                foreach ($value->getPrimaryValues() as $key => $value){
-                    if($key === $name) $this->row[$property->getColumn()] = $value;
+                foreach ($value->getPrimaryValues() as $key => $value) {
+                    if ($key === $name) $this->row[$property->getColumn()] = $value;
                 }
-            } elseif($relationship){
+            } elseif ($relationship) {
                 $this->referenceingEntities[$name] = $value;
             } else {
                 $this->row[$property->getColumn()] = $value;
@@ -94,7 +92,7 @@ class Entity
     }
 
     public function __get($name) {
-        if( strlen($name) > 5 && lcfirst(substr($name, 0,5)) === 'value' ){
+        if (strlen($name) > 5 && lcfirst(substr($name, 0, 5)) === 'value') {
             d($name);
             $name = lcfirst(substr($name, 5));
             d("????");
@@ -102,67 +100,101 @@ class Entity
             return $this->row[$prop->getColumn()];
         }
         $prop = $this->getCurrentReflection()->getProp($name);
-        if(!$prop) throw new Exception("Property `$name` is not defined!");
-        $relationship = $prop->getRelationship();
-        if($relationship instanceof HasOne){
-            if(!isset($this->referencedEntities[$name])){
-                //Fix missing target id
-                $targetColumn = $relationship->getTargetTableColumn();
-                $targetColumn ?: $targetColumn = $this->mapper->getEntityReflectionByTable($relationship->getTargetTable())->getPrimary();
-                //Try to find item
-                $refRow = $this->row->getReferencedRow($prop->getColumn(), $relationship->getTargetTable(), $targetColumn);
-                $entity = $this->entityFactory->create($this->mapper->getEntityReflectionByTable($relationship->getTargetTable())->getName(), $refRow);
-                $entity->makeAlive($this->entityFactory, $this->mapper, $this->connection);
-                $this->referencedEntities[$name] = $entity;
-            }
-            return $this->referencedEntities[$name];
-        }  elseif($relationship instanceof BelongsToOne){
-            if(!isset($this->referenceingEntities[$name])){
-                $refRows = $this->row->getReferencingRows($relationship->getTargetTable(), $relationship->getTargetTableColumn());
-                $count = count($refRows);
-                if ($count > 1) {
-                    throw new InvalidValueException(
-                        'There cannot be more than one entity refwerencing to entity ' . get_called_class(
-                        ) . " in property '{$prop->getName()}' with m:belongToOne relationship."
-                    );
-                } else {
-                    $refRow = $count === 1 ? array_shift($refRows) : null;
-                    $entity = $this->entityFactory->create($this->mapper->getEntityReflectionByTable($relationship->getTargetTable())->getName(), $refRow);
-                    $entity->makeAlive($this->entityFactory, $this->mapper, $this->connection);
-                    $this->referenceingEntities[$name] = $entity;
-                }
-            }
-            return $this->referenceingEntities[$name];
-        } elseif ($relationship instanceof HasMany){
-            if(!isset($this->referenceingEntities[$name])){
-                $refRows = $this->row->getReferencingRows($relationship->getTargetTable(), $relationship->getTargetTableColumn());
-                foreach ($refRows as $refRow){
-                    $entity = $this->entityFactory->create($this->mapper->getEntityReflectionByTable($relationship->getTargetTable())->getName(), $refRow);
-                    $entity->makeAlive($this->entityFactory, $this->mapper, $this->connection);
-                    $this->referenceingEntities[$name][] = $entity;
-                }
-            }
-            return $this->referenceingEntities[$name];
-        }  elseif($relationship instanceof BelongsToMany){
-            if(!isset($this->referenceingEntities[$name])){
-                $refRows = $this->row->getReferencingRows($relationship->getTargetTable(), $relationship->getTargetTableColumn());
-                foreach ($refRows as $refRow){
-                    $entity = $this->entityFactory->create($this->mapper->getEntityReflectionByTable($relationship->getTargetTable())->getName(), $refRow);
-                    $entity->makeAlive($this->entityFactory, $this->mapper, $this->connection);
-                    $this->referenceingEntities[$name][] = $entity;
-                }
-                if(!isset($this->referenceingEntities[$name])) $this->referenceingEntities[$name] = [];
-            }
-            return $this->referenceingEntities[$name];
-        }
-//        $belongsToMany = $this->getCurrentReflection()->getBelongsToMany($name);
-//        d($this->row->hasColumn($prop->getColumn()));
-//        d($this->row);
-//        d($this->row->hasColumn($prop->getColumn()));
-        return $this->row->hasColumn($prop->getColumn()) ? $this->row[$prop->getColumn()] : null;
+        if (!$prop) throw new Exception("Property `$name` is not defined!");
 
+        return $this->get($prop, []);
     }
 
+    private function getHasOneEntity($name, HasOne $relationship, Property $prop) {
+        if (!isset($this->referencedEntities[$name])) {
+            //Fix missing target id
+            $targetColumn = $relationship->getTargetTableColumn();
+            $targetColumn ?: $targetColumn = $this->mapper->getEntityReflectionByTable($relationship->getTargetTable())->getPrimary();
+            //Try to find item
+            $refRow = $this->row->getReferencedRow($prop->getColumn(), $relationship->getTargetTable(), $targetColumn);
+            $entity = $this->entityFactory->create($this->mapper->getEntityReflectionByTable($relationship->getTargetTable())->getName(), $refRow);
+            $entity->makeAlive($this->entityFactory, $this->mapper, $this->connection);
+            $this->referencedEntities[$name] = $entity;
+        }
+        return $this->referencedEntities[$name];
+    }
+
+    private function getHasManyEntities($name, HasMany $relationship, Property $prop, $filter = []) {
+        if (!isset($this->referenceingEntities[$name])) {
+            $refRows = $this->row->getReferencingRows($relationship->getTargetTable(), $relationship->getTargetTableColumn(), $filter);
+            foreach ($refRows as $refRow) {
+                $entity = $this->entityFactory->create($this->mapper->getEntityReflectionByTable($relationship->getTargetTable())->getName(), $refRow);
+                $entity->makeAlive($this->entityFactory, $this->mapper, $this->connection);
+                $this->referenceingEntities[$name][] = $entity;
+            }
+        }
+        return $this->referenceingEntities[$name];
+    }
+
+    private function getBelongsToOneEntity($name, BelongsToOne $relationship, Property $prop, $filter = []) {
+        if (!isset($this->referenceingEntities[$name])) {
+            $refRows = $this->row->getReferencingRows($relationship->getTargetTable(), $relationship->getTargetTableColumn(), $filter);
+            $count = count($refRows);
+            if ($count > 1) {
+                throw new InvalidValueException(
+                    'There cannot be more than one entity refwerencing to entity ' .
+                    get_called_class() .
+                    " in property '{$prop->getName()}' with m:belongToOne relationship."
+                );
+            } else if($count === 0){
+                $this->referenceingEntities[$name] = null;
+            } else {
+                $refRow = $count === 1 ? array_shift($refRows) : null;
+                $entity = $this->entityFactory->create($this->mapper->getEntityReflectionByTable($relationship->getTargetTable())->getName(), $refRow);
+                $entity->makeAlive($this->entityFactory, $this->mapper, $this->connection);
+                $this->referenceingEntities[$name] = $entity;
+            }
+        }
+        return $this->referenceingEntities[$name];
+    }
+
+    private function getBelongsToManyEntity($name, BelongsToMany $relationship, Property $prop, $filter = []) {
+        if (!isset($this->referenceingEntities[$name])) {
+            $refRows = $this->row->getReferencingRows($relationship->getTargetTable(), $relationship->getTargetTableColumn(), $filter);
+            foreach ($refRows as $refRow) {
+                $entity = $this->entityFactory->create($this->mapper->getEntityReflectionByTable($relationship->getTargetTable())->getName(), $refRow);
+                $entity->makeAlive($this->entityFactory, $this->mapper, $this->connection);
+                $this->referenceingEntities[$name][] = $entity;
+            }
+            if (!isset($this->referenceingEntities[$name])) $this->referenceingEntities[$name] = [];
+        }
+        return $this->referenceingEntities[$name];
+    }
+
+    protected function get($property, $filter = []) {
+        if($property instanceof Property){
+            $name = $property->getVariable();
+        } else {
+            $name = $property;
+            $property = $this->getCurrentReflection()->getProp($property);
+        }
+
+        $relationship = $property->getRelationship();
+        if ($relationship instanceof HasOne) { //WITHOUT FILTER
+            return $this->getHasOneEntity($name, $relationship, $property);
+        } elseif ($relationship instanceof BelongsToOne) { //WITH FILTER
+            return $this->getBelongsToOneEntity($name, $relationship, $property, $filter);
+        } elseif ($relationship instanceof HasMany) { //WITH FILTER
+            return $this->getHasManyEntities($name, $relationship, $property, $filter);
+        } elseif ($relationship instanceof BelongsToMany) { //WITH FILTER
+            return $this->getBelongsToManyEntity($name, $relationship, $property, $filter);
+        } else {
+            return $this->row->hasColumn($property->getColumn()) ? $this->row[$property->getColumn()] : null;
+        }
+    }
+
+    protected function getRelatedEntity(Relationship $relationship, $filter = null){
+        $parentMethod = Utils::getParentMethod();
+        $virtualProperty = new Property($parentMethod);
+        $virtualProperty->setColumn($relationship->getColumn());
+        $virtualProperty->setRelationship($relationship);
+        return $this->get($virtualProperty, !is_array($filter) ? [$filter] : $filter);
+    }
 
     public static function getReflection() {
         $class = get_called_class();
@@ -173,18 +205,17 @@ class Entity
     }
 
 
-    public function getCurrentReflection()
-    {
+    public function getCurrentReflection() {
         if ($this->currentReflection === null) {
             $this->currentReflection = $this->getReflection();
         }
         return $this->currentReflection;
     }
 
-    public function attach($id){
-        if($id) {
+    public function attach($id) {
+        if ($id) {
             $pv = $this->getPrimaryValues();
-            if($pv && count($pv) === 1){
+            if ($pv && count($pv) === 1) {
                 $pv = array_combine(array_keys($pv), [$id]);
                 $this->assign($pv);
                 $this->row->attach($id, $this->mapper->getTableName(get_called_class()));
@@ -196,7 +227,15 @@ class Entity
         }
     }
 
-    public function makeAlive(EntityFactory $entityFactory, Mapper $mapper, Connection $connection){
+    public function getTableName(){
+        if(!$this->isAttached()){
+            $reflClass = new \ReflectionClass(self::class);
+            throw new Exception("Entity " . $reflClass->getName() . " is not attached!");
+        }
+        return $this->mapper->getTableName(get_called_class());
+    }
+
+    public function makeAlive(EntityFactory $entityFactory, Mapper $mapper, Connection $connection) {
         $this->attached = true;
         $this->entityFactory = $entityFactory;
         $this->mapper = $mapper;
@@ -206,11 +245,11 @@ class Entity
         $this->row->setConnection($connection);
     }
 
-    public function getPrimaryValues(){
+    public function getPrimaryValues() {
         $primaries = $this->getCurrentReflection()->getPrimary();
-        if($primaries && is_array($primaries)) {
+        if ($primaries && is_array($primaries)) {
             $pairs = [];
-            foreach ($primaries as $column){
+            foreach ($primaries as $column) {
                 $pairs[$column] = $this->__get($column);
             }
             return $pairs;
@@ -221,32 +260,93 @@ class Entity
         return null;
     }
 
-    public function assign($data, array $whiteList = []){
+    public function assign($data, array $whiteList = []) {
         $reflection = $this->getCurrentReflection();
-        foreach ($data as $column => $value){
-            if(!$whiteList || in_array($column, $whiteList)){
+        foreach ($data as $column => $value) {
+            if (!$whiteList || in_array($column, $whiteList)) {
                 $prop = $reflection->getPropByColumn($column);
                 $var = $prop->getVariable();
-                if(!$var) throw new \Exception("Column `$column` is not defined!");
+                if (!$var) throw new \Exception("Column `$column` is not defined!");
                 $this->row[$column] = $value;
             }
         }
     }
 
-    public function isAttached(){
+    public function isAttached() {
         return $this->row->isAttached();
     }
 
-    public function getReferenced(){
+    public function getReferenced() {
         return $this->referencedEntities;
     }
 
-    public function getReferencing(){
+    public function getReferencing() {
         return $this->referenceingEntities;
     }
 
-    public function toArray(){
+    public function toArray() {
         return $this->row->toArray();
+    }
+
+    /**
+     * Whether a offset exists
+     * @link http://php.net/manual/en/arrayaccess.offsetexists.php
+     * @param mixed $offset <p>
+     * An offset to check for.
+     * </p>
+     * @return boolean true on success or false on failure.
+     * </p>
+     * <p>
+     * The return value will be casted to boolean if non-boolean was returned.
+     * @since 5.0.0
+     */
+    public function offsetExists($offset) {
+        $property = $this->getCurrentReflection()->getPropByColumn($offset);
+        return isset($this->{$property->getVariable()});
+    }
+
+    /**
+     * Offset to retrieve
+     * @link http://php.net/manual/en/arrayaccess.offsetget.php
+     * @param mixed $offset <p>
+     * The offset to retrieve.
+     * </p>
+     * @return mixed Can return all value types.
+     * @since 5.0.0
+     */
+    public function offsetGet($offset) {
+        return $this->row[$offset];
+    }
+
+    /**
+     * Offset to set
+     * @link http://php.net/manual/en/arrayaccess.offsetset.php
+     * @param mixed $offset <p>
+     * The offset to assign the value to.
+     * </p>
+     * @param mixed $value <p>
+     * The value to set.
+     * </p>
+     * @return void
+     * @since 5.0.0
+     */
+    public function offsetSet($offset, $value) {
+        $property = $this->getCurrentReflection()->getPropByColumn($offset);
+        $this->{$property->getVariable()} = $value;
+    }
+
+    /**
+     * Offset to unset
+     * @link http://php.net/manual/en/arrayaccess.offsetunset.php
+     * @param mixed $offset <p>
+     * The offset to unset.
+     * </p>
+     * @return void
+     * @since 5.0.0
+     */
+    public function offsetUnset($offset) {
+        $property = $this->getCurrentReflection()->getPropByColumn($offset);
+        unset($this->{$property->getVariable()});
     }
 }
 

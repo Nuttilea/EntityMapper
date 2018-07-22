@@ -8,7 +8,7 @@
 
 namespace Nuttilea\EntityMapper;
 
-use App\Model\Database\Entities\Tasks;
+use App\Model\Database\Entities\ScraperTask;
 use Dibi\Fluent;
 use Nuttilea\EntityMapper\Exception\Exception;
 use Nuttilea\EntityMapper\Factory\EntityFactory;
@@ -171,12 +171,12 @@ class Repository {
             $row = $row->toArray();
         }
         
-        //TODO: check this, it allows to send directly the object instead of knowing wich is the primary colum, but work only if one column is primary
-        foreach($data as $key => $value){
-            if(is_object($value) && $primary = $value->getPrimaryValues()){
+        //TODO: check this, it allows to send directly the object instead of knowing which is the primary column, but work only if one column is primary
+        foreach($row as $key => $value){
+            if(is_object($value) && $value instanceof Entity && $primary = $value->getPrimaryValues()){
                 if(is_array($primary) && count($primary) === 1){
                     $col = array_keys($primary)[0];
-                    $data[$key] = $data[$key]->$col;
+                    $row[$key] = $row[$key]->$col;
                 }
             }
         }
@@ -190,7 +190,7 @@ class Repository {
         }
     }
 
-    public function update($data, $where = null) {
+    public function update($data, $where = []) {
         if ($data instanceof Entity) {
             if (count($where) > 0) throw new Exception('Cannt use argument $where when argument $data is Entity;');
             $where = $data->getPrimaryValues();
@@ -240,11 +240,11 @@ class Repository {
         return $this->createEntities($fluent->fetchAll());
     }
 
-    public function findOne(array $where = [], $orderBy = []) {
+
+    public function findOne(array $where = []) {
         $table = $this->mapper->getTableByRepositoryClass(get_called_class());
         $fluent = $this->dibi->select('*')->from($table);
         if ($where) $fluent->where($where);
-        if ($orderBy) $fluent->orderBy($orderBy);
         $row = $fluent->fetch();
 
         return $this->createEntity($row);

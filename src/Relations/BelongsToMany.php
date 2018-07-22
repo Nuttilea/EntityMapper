@@ -8,41 +8,7 @@
 
 namespace Nuttilea\EntityMapper;
 
-class BelongsToMany
-{
-    private $targetTableColumn;
-    /** @var string|null */
-    private $targetTable;
+class BelongsToMany extends Relationship {
 
-    /**
-     * @param string|null $targetTableColumn
-     * @param string|null $targetTable
-     * @param string $strategy
-     */
-    public function __construct($targetTable, $targetTableColumn)
-    {
-        $this->targetTableColumn = $targetTableColumn;
-        $this->targetTable = $targetTable;
-    }
-
-    /**
-     * Gets name of column referencing target table
-     *
-     * @return string|null
-     */
-    public function getTargetTableColumn()
-    {
-        return $this->targetTableColumn;
-    }
-
-    /**
-     * Gets name of target table
-     *
-     * @return string|null
-     */
-    public function getTargetTable()
-    {
-        return $this->targetTable;
-    }
 
 }

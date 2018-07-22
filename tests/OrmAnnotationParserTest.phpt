@@ -44,7 +44,7 @@ class OrmAnnotationParserTest extends Tester\TestCase
                 'column' => 'ID',
                 'type' => 'int'
             ],
-            'tag' => [
+            'scraperTag' => [
                 'column' => true,
                 'type' => 'int'
             ],

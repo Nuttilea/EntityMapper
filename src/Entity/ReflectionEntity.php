@@ -23,6 +23,7 @@ class ReflectionEntity extends \ReflectionClass {
     }
 
     public function parseProperties() {
+
         $annotations = AnnotationsParser::getAll($this);
         $properties = OrmAnotationPareser::parseOrmPropertiesTags($annotations['property']);
         foreach ($properties as $var => $property) {
@@ -37,35 +38,44 @@ class ReflectionEntity extends \ReflectionClass {
                     $prop->setPrimary();
                     $this->primary[] = $prop;
                 }
-
-                if(key_exists('hasMany', $property)){
-                    list($targetTable, $targetTableColumn) = explode(':', $property['hasMany']) + [null, null];
-                    $prop->setRelationship(new HasMany($targetTable, $targetTableColumn));
-                }
-
-                if(key_exists('hasOne', $property)){
-                    list($table, $id) = explode(':', $property['hasOne']) + [null, null];
-                    $prop->setRelationship(new HasOne($table, $id));
-                }
                 $this->columns[$column] = $prop;
-            }
-            if(key_exists('belongsToMany', $property)){
-                list($targetTable, $targetTableColumn) = explode(':', $property['belongsToMany']) + [null, null];
-                $prop->setRelationship(new BelongsToMany($targetTable, $targetTableColumn));
-            }
-
-            if(key_exists('belongsToOne', $property)){
-                list($targetTable, $targetTableColumn) = explode(':', $property['belongsToOne']) + [null, null];
-                $prop->setRelationship(new BelongsToOne($targetTable, $targetTableColumn));
             }
             $this->props[$var] = $prop;
         }
 
+        // This is because i need have primary key found
+        foreach ($properties as $var => $property){
+            $prop = $this->getProp($var);
+            $table = 'this';
+            if(key_exists('hasOne', $property)){
+                list($targetTable, $targetTableColumn) = explode(':', $property['hasOne']) + [null, null];
+                //Needed column
+                $prop->setRelationship(new HasOne($table, $prop->getColumn(), $targetTable, $targetTableColumn));
+            } else  if(key_exists('hasMany', $property)){
+                list($targetTable, $targetTableColumn) = explode(':', $property['hasMany']) + [null, null];
+                //Needed column
+                $prop->setRelationship(new HasMany($table, $prop->getColumn(), $targetTable, $targetTableColumn));
+            }  else if(key_exists('belongsToOne', $property)){
+                list($targetTable, $targetTableColumn) = explode(':', $property['belongsToOne']) + [null, null];
+                //If not column then current primary key
+                $column = $prop->getColumn();
+                if(!$column) {
+                    $column = $this->getPrimary();
+                }
+                $prop->setRelationship(new BelongsToOne($table, $column, $targetTable, $targetTableColumn));
+            }else if(key_exists('belongsToMany', $property)){
+                list($targetTable, $targetTableColumn) = explode(':', $property['belongsToMany']) + [null, null];
+                //If not column then current primary key
+                $column = $prop->getColumn();
+                if(!$column) {
+                    $column = $this->getPrimary();
+                }
+                $prop->setRelationship(new BelongsToMany($table, $column, $targetTable, $targetTableColumn));
+            }
+        }
+
     }
 
-    public function getTableName() {
-        return key_exists('tablename', $this->entitySchema) ? $this->entitySchema['tablename'] : $this->entitySchema['tablename'] = $this->trimNamespace($this->getName());
-    }
 
     /**
      * @param $name

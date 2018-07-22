@@ -67,12 +67,12 @@ class RowPointer implements \ArrayAccess {
         return $this->result->getRowRecords($this->rowId);
     }
 
-    public function getReferencedRow($currentColumn, $targetTable, $targetColumn) {
-        return $this->result->getReferencedRow($this->{$currentColumn}, $currentColumn, $targetTable, $targetColumn);
+    public function getReferencedRow($currentColumn, $targetTable, $targetColumn, $filter = []) {
+        return $this->result->getReferencedRow($this->{$currentColumn}, $currentColumn, $targetTable, $targetColumn, $filter);
     }
 
-    public function getReferencingRows($table, $viaColumn) {
-        return $this->result->getReferencingRows($this->rowId, $table, $viaColumn);
+    public function getReferencingRows($table, $viaColumn, $filter = []) {
+        return $this->result->getReferencingRows($this->rowId, $table, $viaColumn, $filter);
     }
 
     public function hasColumn($column) {

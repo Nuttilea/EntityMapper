@@ -7,6 +7,8 @@
  */
 namespace Nuttilea\EntityMapper;
 
+use Dibi\Fluent;
+
 class Connection
 {
     /** @var \Dibi\Connection */
@@ -23,17 +25,30 @@ class Connection
         $this->dibi = $dibi;
     }
 
-    public function findIn($table, $column, $ids){
+    public function findIn($table, $column, $ids, $filter = []){
+
+
 
 //        d($this->dibi->select('%n.*', $table)
 //            ->from('%n', $table)
 //            ->where('%n.%n IN %in ', $table, $column, $ids)
 //            ->test());
 
-        return $this->dibi->select('%n.*', $table)
+        $fluent = $this->dibi->select('%n.*', $table)
             ->from('%n', $table)
-            ->where('%n.%n IN %in', $table, $column, $ids)
-            ->execute()->setRowClass(null)->fetchAll();
+            ->where('%n.%n IN %in', $table, $column, $ids);
+        $fluent = $this->applyFilter($fluent, $filter);
+        return $fluent->execute()->setRowClass(null)->fetchAll();
+    }
+
+    protected function applyFilter(Fluent $fluent, $filters = []){
+        foreach ($filters as $filter){
+            if(is_callable($filter)){
+                $f = call_user_func($filter, $fluent);
+                if($f) $fluent = $f;
+            }
+        }
+        return $fluent;
     }
 
 }

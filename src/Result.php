@@ -100,14 +100,14 @@ class Result implements \Iterator {
         return !isset($this->rows[$id]) ? null : new RowPointer($id, $this);
     }
 
-    public function getReferencedRow($id, $currentColumn, $table, $targetColumn) {
-        $result = $this->getReferencedResult($table, $currentColumn);
+    public function getReferencedRow($id, $currentColumn, $table, $targetColumn, $filter = []) {
+        $result = $this->getReferencedResult($table, $currentColumn, $filter);
         $rowId = $result->getRow($id)[$targetColumn];
         return $result->getRow($rowId);
     }
 
-    public function getReferencingRows($id, $table, $viaColumn){
-        $result = $this->getReferencingResult($table, $viaColumn);
+    public function getReferencingRows($id, $table, $viaColumn, $filter = []){
+        $result = $this->getReferencingResult($table, $viaColumn, $filter);
         $resultHash = spl_object_hash($result);
         if(!isset($this->index[$resultHash])){
             $this->index[$resultHash] = [];
@@ -122,29 +122,24 @@ class Result implements \Iterator {
     }
 
     /** @return Result */
-    public function getReferencingResult($table, $viaColumn){
+    public function getReferencingResult($table, $viaColumn, $filter = []){
         $key = "$table{$viaColumn}";
         if(isset($this->referencing[$key])){
             return $this->referencing[$key];
         }
         $reflectionEntity = $this->mapper->getEntityReflectionByTable($table);
-//        dd($table, $viaColumn, $this->mapper, $this->connection, $this->getIds($this->reflectionEntity->getPrimary()));
-        $res = $this->connection->findIn($table, $viaColumn, $this->getIds($this->reflectionEntity->getPrimary()));
+        $res = $this->connection->findIn($table, $viaColumn, $this->getIds($this->reflectionEntity->getPrimary()), $filter);
         return $this->referencing[$key] = self::createAttachedInstance($res, $reflectionEntity, $this->connection, $this->mapper);
     }
 
     /** @return Result */
-    public function getReferencedResult($table, $viaColumn){
+    public function getReferencedResult($table, $viaColumn, $filter = []){
         $key = "$table#{$viaColumn}";
         if(isset($this->referenced[$key])){
             return $this->referenced[$key];
         }
         $reflectionEntity = $this->mapper->getEntityReflectionByTable($table);
-
-        $res = $this->connection->findIn($table, $reflectionEntity->getPrimary(), $this->getIds($viaColumn));
-//        d($table, $viaColumn);
-
-//        dd(self::createAttachedInstance($res, $reflectionEntity, $this->connection, $this->mapper));
+        $res = $this->connection->findIn($table, $reflectionEntity->getPrimary(), $this->getIds($viaColumn), $filter);
         return $this->referenced[$key] = self::createAttachedInstance($res, $reflectionEntity, $this->connection, $this->mapper);
     }
 
