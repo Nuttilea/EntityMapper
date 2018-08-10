@@ -92,10 +92,8 @@ class Entity implements \ArrayAccess {
     }
 
     public function __get($name) {
-        if (strlen($name) > 5 && lcfirst(substr($name, 0, 5)) === 'value') {
-            d($name);
-            $name = lcfirst(substr($name, 5));
-            d("????");
+        if (strlen($name) > 5 && substr($name, strlen($name)-5, strlen($name)) === 'Value') {
+            $name = substr($name, 0, strlen($name)-5);
             $prop = $this->getCurrentReflection()->getProp($name);
             return $this->row[$prop->getColumn()];
         }

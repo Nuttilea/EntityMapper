@@ -120,20 +120,29 @@ class Repository {
         return true;
     }
 
-    public function persist($entity){
-        if($entity instanceof Entity){
-//            $referenced = $entity->getReferenced();
-//            $referencing = $entity->getReferencing();
-            if($entity->isAttached()) /* UPDATE */ {
-               $this->update($entity);
+    public function persist(Entity $entity) {
+        if ($entity instanceof Entity) {
+            //            $referenced = $entity->getReferenced();
+            //            $referencing = $entity->getReferencing();
+            if ($entity->isAttached()) /* UPDATE */ {
+                $this->update($entity);
             } else /* INSERT */ {
                 $returnPrimary = !empty($entity->getPrimaryValues());
-                $id = $this->insert($entity, $returnPrimary);
+                $id = null;
+                foreach ($entity->getPrimaryValues() as $key => $pv) {
+                    $id = $pv;
+                    $returnPrimary = $returnPrimary && $pv === null;
+                }
+
+                $retId = $this->insert($entity, $returnPrimary);
+                if($retId){
+                    $id = $retId;
+                }
                 $entity->makeAlive($this->entityFactory, $this->mapper, $this->connection);
                 $entity->attach($id);
-//                dd($entity, $entity->isAttached());
+                //                dd($entity, $entity->isAttached());
             }
-//            $this->persistBelongsToMany($referencing);
+            //            $this->persistBelongsToMany($referencing);
         } else {
             return false;
         }
@@ -144,9 +153,9 @@ class Repository {
      * TODO: IS NOT IMPLEMENTED YET
      * @param Entity[] $items
      */
-    protected function persistBelongsToMany(array $items){
+    protected function persistBelongsToMany(array $items) {
         $bulkInsert = [];
-        foreach ($items as $item){
+        foreach ($items as $item) {
             $row = $item->toArray();
             $row['FOREGIN_KEY'] = 'FOREGIN_KEY';
             $bulkInsert[] = $row;
@@ -155,7 +164,7 @@ class Repository {
 
     }
 
-    public function insertBulk(array $rows){
+    public function insertBulk(array $rows) {
         $rawRows = $this->extractRawRows($rows);
         $this->dibi->insert($this->getTableName(), $rawRows);
     }
@@ -170,24 +179,22 @@ class Repository {
         if ($row instanceof Entity) {
             $row = $row->toArray();
         }
-        
+
         //TODO: check this, it allows to send directly the object instead of knowing which is the primary column, but work only if one column is primary
-        foreach($row as $key => $value){
-            if(is_object($value) && $value instanceof Entity && $primary = $value->getPrimaryValues()){
-                if(is_array($primary) && count($primary) === 1){
+        foreach ($row as $key => $value) {
+            if (is_object($value) && $value instanceof Entity && $primary = $value->getPrimaryValues()) {
+                if (is_array($primary) && count($primary) === 1) {
                     $col = array_keys($primary)[0];
                     $row[$key] = $row[$key]->$col;
                 }
             }
         }
-        
-        try {
-//            dd($this->dibi->insert($this->getTableName(), $row)->test());
-            $this->dibi->insert($this->getTableName(), $row)->execute();
-            return $retPrimary ? $this->dibi->getInsertId() : null;
-        } catch (\Dibi\Exception $e) {
-            throw new Exception($e->getMessage(), $e->getCode(), $e);
-        }
+
+
+        //            dd($this->dibi->insert($this->getTableName(), $row)->test());
+        $this->dibi->insert($this->getTableName(), $row)->execute();
+        return $retPrimary ? $this->dibi->getInsertId() : null;
+
     }
 
     public function update($data, $where = []) {
@@ -250,12 +257,12 @@ class Repository {
         return $this->createEntity($row);
     }
 
-    private function extractRawRows(array $rows){
+    private function extractRawRows(array $rows) {
         $rawRows = [];
-        foreach ($rows as $row){
-            if($row instanceof Entity) {
+        foreach ($rows as $row) {
+            if ($row instanceof Entity) {
                 $rawRows[] = $row->toArray();
-            } else if(is_array($row)) {
+            } else if (is_array($row)) {
                 $rawRows[] = $row();
             } else {
                 throw new Exception("Item `$row` isn't instance of Entity or array");
