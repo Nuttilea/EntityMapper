@@ -23,9 +23,9 @@ class OrmAnotationPareser
         static $tokens = ['true' => true, 'false' => false, 'null' => null, '' => true];
         $regexp_orm ='~((?<='.self::RE_SNAME.')'.self::RE_IDENTIFIER.') [ \t]* (\((?> '.self::RE_STRING.' | [^\'")@]+)+\) | (?>(?!'.self::RE_SNAME.'|  [\n\r]).)* |  )~mx';
         foreach ($properties as $prop){
-            
+//            d($prop);
             $match = Strings::match($prop, '~^(\w*\[?\]?(?>\s)*)?([$]\w*)?~mx');
-            
+
             list(,$type,$variable) = $match;
             
             if($match && $variable )

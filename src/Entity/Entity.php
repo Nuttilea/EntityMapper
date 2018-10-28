@@ -92,11 +92,11 @@ class Entity implements \ArrayAccess {
     }
 
     public function __get($name) {
-        if (strlen($name) > 5 && substr($name, strlen($name)-5, strlen($name)) === 'Value') {
-            $name = substr($name, 0, strlen($name)-5);
-            $prop = $this->getCurrentReflection()->getProp($name);
-            return $this->row[$prop->getColumn()];
-        }
+//        if (strlen($name) > 5 && substr($name, strlen($name)-5, strlen($name)) === 'Value') {
+//            $name = substr($name, 0, strlen($name)-5);
+//            $prop = $this->getCurrentReflection()->getProp($name);
+//            return $this->row[$prop->getColumn()];
+//        }
         $prop = $this->getCurrentReflection()->getProp($name);
         if (!$prop) throw new Exception("Property `$name` is not defined!");
 
@@ -184,6 +184,20 @@ class Entity implements \ArrayAccess {
         } else {
             return $this->row->hasColumn($property->getColumn()) ? $this->row[$property->getColumn()] : null;
         }
+    }
+
+    public function getPropertyValue($property){
+        if($property instanceof Property){
+            $name = $property->getVariable();
+        } else {
+            $name = $property;
+            $property = $this->getCurrentReflection()->getProp($property);
+        }
+        return $this->row->hasColumn($property->getColumn()) ? $this->row[$property->getColumn()] : null;
+    }
+
+    public function getColumnValue($column){
+        return $this->row->hasColumn($column) ? $this->row[$column] : null;
     }
 
     protected function getRelatedEntity(Relationship $relationship, $filter = null){
@@ -282,8 +296,12 @@ class Entity implements \ArrayAccess {
         return $this->referenceingEntities;
     }
 
-    public function toArray() {
-        return $this->row->toArray();
+    public function toArray($columns = []) {
+        $data = $this->row->toArray();
+        if($columns){
+            $data = array_intersect_key($data, array_flip($columns));
+        }
+        return $data;
     }
 
     /**

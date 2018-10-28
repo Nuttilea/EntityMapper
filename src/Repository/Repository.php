@@ -169,13 +169,22 @@ class Repository {
         $this->dibi->insert($this->getTableName(), $rawRows);
     }
 
+    public function insertIgnoreBulk(array $rows) {
+        $rawRows = $this->extractRawRows($rows);
+        $this->dibi->insert($this->getTableName(), $rawRows)->setFlag('IGNORE');
+    }
+
+    public function insertIgnore($row) {
+        $this->insert($row, false, ["IGNORE"]);
+    }
+
     /**
      * @param $row
      * @param bool $retPrimary
      * @return bool|mixed
      * @throws Exception
      */
-    public function insert($row, $retPrimary = false) {
+    public function insert($row, $retPrimary = false, $flags = []) {
         if ($row instanceof Entity) {
             $row = $row->toArray();
         }
@@ -192,7 +201,11 @@ class Repository {
 
 
         //            dd($this->dibi->insert($this->getTableName(), $row)->test());
-        $this->dibi->insert($this->getTableName(), $row)->execute();
+        $insertStmt = $this->dibi->insert($this->getTableName(), $row);
+        foreach ($flags as $flag){
+            $insertStmt->setFlag($flag);
+        }
+        $insertStmt->execute();
         return $retPrimary ? $this->dibi->getInsertId() : null;
 
     }
@@ -246,7 +259,6 @@ class Repository {
         $fluent = $this->getSelectionFindAll($where, $orderBy, $limit, $offset);
         return $this->createEntities($fluent->fetchAll());
     }
-
 
     public function findOne(array $where = []) {
         $table = $this->mapper->getTableByRepositoryClass(get_called_class());
